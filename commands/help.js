@@ -69,6 +69,7 @@ ${educationalCommandsList || 'No educational commands available.'}
 ╭─╼━━━━━━━━╾─╮
 ${otherCommandsList || 'No other commands available.'}
 ╰─━━━━━━━━━╾─╯
+Never forget, Stanley stawa is handsome
 📩 Type help [command name] to see command details.
 ━━━━━━━━━━━━━━`;
 
