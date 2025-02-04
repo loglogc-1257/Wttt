@@ -16,13 +16,13 @@ module.exports = {
     const query = args.join(" ").toLowerCase();
 
     if (!query) {
-      const defaultMessage = "HELLO AM LOVELY_AI READY TO ANSWER YOUR QUESTION ⁉️";
+      const defaultMessage = "HELLO AM MICKEY READY TO ANSWER YOUR QUESTION ⁉️";
       const formattedMessage = useFontFormatting ? formatResponse(defaultMessage) : defaultMessage;
       return await sendMessage(senderId, { text: formattedMessage }, pageAccessToken);
     }
 
     if (query === "QUI TA CRÉÉ " || query === "who created you?") {
-      const jokeMessage = "KELVIN HIKARU";
+      const jokeMessage = "Stanley stawa ";
       const formattedMessage = useFontFormatting ? formatResponse(jokeMessage) : jokeMessage;
       return await sendMessage(senderId, { text: formattedMessage }, pageAccessToken);
     }
@@ -44,9 +44,9 @@ const handleChatResponse = async (senderId, input, pageAccessToken) => {
     const formattedAnsweringMessage = useFontFormatting ? formatResponse(answeringMessage) : answeringMessage;
     await sendMessage(senderId, { text: formattedAnsweringMessage }, pageAccessToken);
 
-    const defaultMessage = `LOVELY_AI 👸
+    const defaultMessage = `Stanley stawa 
 
-👸|LOVELY_AI
+🤖|Stan
 ✅ Answer: ${response}
 ▬▭▬ ▬▭▬✧▬▭▬ ▬▭▬
 ⏰ Response: ${responseTime}`;
