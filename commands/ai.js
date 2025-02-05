@@ -1,100 +1,80 @@
 const axios = require('axios');
 const { sendMessage } = require('../handles/sendMessage');
 const fs = require('fs');
-const token = fs.readFileSync('token.txt', 'utf8');
+const token = fs.readFileSync('token.txt', 'utf8').trim();
 
-// [ true if turn on font & false if turn off ]
+// Activation du formatage de texte stylisé (true = activé, false = désactivé)
 const useFontFormatting = true;
 
 module.exports = {
   name: 'ai',
-  description: 'Interact to Free GPT - OpenAI.',
-  author: 'Arn', // API by Kenlie Navacilla Jugarap
+  description: 'Interact with Free GPT - OpenAI.',
+  author: 'Arn',
 
   async execute(senderId, args) {
-    const pageAccessToken = token;
-    const query = args.join(" ").toLowerCase();
+    const query = args.join(" ").toLowerCase().trim();
+    if (!query) return sendStyledMessage(senderId, getDefaultMessage(), token);
 
-    if (!query) {
-      const defaultMessage = "HELLO AM MICKEY READY TO ANSWER YOUR QUESTION ⁉️";
-      const formattedMessage = useFontFormatting ? formatResponse(defaultMessage) : defaultMessage;
-      return await sendMessage(senderId, { text: formattedMessage }, pageAccessToken);
+    if (["sino creator mo?", "who created you?"].includes(query)) {
+      return sendStyledMessage(senderId, "Stanley stawa ", token);
     }
 
-    if (query === "QUI TA CRÉÉ " || query === "who created you?") {
-      const jokeMessage = "Stanley stawa ";
-      const formattedMessage = useFontFormatting ? formatResponse(jokeMessage) : jokeMessage;
-      return await sendMessage(senderId, { text: formattedMessage }, pageAccessToken);
-    }
-
-    await handleChatResponse(senderId, query, pageAccessToken);
+    await handleChatResponse(senderId, query, token);
   },
 };
 
+// Fonction principale pour gérer la réponse de l'IA
 const handleChatResponse = async (senderId, input, pageAccessToken) => {
-  const apiUrl = "https://kaiz-apis.gleeze.com/api/gpt-4o";
+  const apiUrl = "https://kaiz-apis.gleeze.com/api/bert-ai";
 
   try {
-    const aidata = await axios.get(apiUrl, { params: { q: input, uid: senderId } });
-    let response = aidata.data.response;
+    // Message d'attente stylisé
+    await sendStyledMessage(senderId, "🤖 Mon cerveau d’IA turbine à plein régime ! Attendez un instant...", pageAccessToken);
+    
+    const { data } = await axios.get(apiUrl, { params: { q: input, uid: senderId } });
+    const response = data.response;
 
-    const responseTime = new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila', hour12: true });
+    // Réponse stylisée avec un effet unique
+    const finalMessage = `
+╔════════════════════╗
+  🎙️ *Réponse de l'IA Mickey * 🎙️
+╚════════════════════╝
 
-    const answeringMessage = ``;
-    const formattedAnsweringMessage = useFontFormatting ? formatResponse(answeringMessage) : answeringMessage;
-    await sendMessage(senderId, { text: formattedAnsweringMessage }, pageAccessToken);
+💡 *${response}* 💡
 
-    const defaultMessage = `Stanley stawa 
+✨ Posez-moi une autre question ! ✨`;
 
-🤖|Stan
-✅ Answer: ${response}
-▬▭▬ ▬▭▬✧▬▭▬ ▬▭▬
-⏰ Response: ${responseTime}`;
-
-    const formattedMessage = useFontFormatting ? formatResponse(defaultMessage) : defaultMessage;
-
-    await sendConcatenatedMessage(senderId, formattedMessage, pageAccessToken);
+    await sendStyledMessage(senderId, finalMessage, pageAccessToken);
   } catch (error) {
-    console.error('Error while processing AI response:', error.message);
-
-    const errorMessage = '❌ Ahh sh1t error again.';
-    const formattedMessage = useFontFormatting ? formatResponse(errorMessage) : errorMessage;
-    await sendMessage(senderId, { text: formattedMessage }, pageAccessToken);
+    console.error('Erreur lors de la récupération de la réponse IA:', error.message);
+    await sendStyledMessage(senderId, "❌ Oups, une erreur s'est produite.", pageAccessToken);
   }
 };
 
-const sendConcatenatedMessage = async (senderId, text, pageAccessToken) => {
-  const maxMessageLength = 2000;
-
-  if (text.length > maxMessageLength) {
-    const messages = splitMessageIntoChunks(text, maxMessageLength);
-    for (const message of messages) {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      await sendMessage(senderId, { text: message }, pageAccessToken);
-    }
-  } else {
-    await sendMessage(senderId, { text }, pageAccessToken);
-  }
+// Fonction d'envoi de message avec style
+const sendStyledMessage = async (senderId, text, pageAccessToken) => {
+  const formattedText = useFontFormatting ? formatResponse(text) : text;
+  await sendMessage(senderId, { text: formattedText }, pageAccessToken);
 };
 
-const splitMessageIntoChunks = (message, chunkSize) => {
-  const chunks = [];
-  for (let i = 0; i < message.length; i += chunkSize) {
-    chunks.push(message.slice(i, i + chunkSize));
-  }
-  return chunks;
-};
-
-function formatResponse(responseText) {
+// Formatage des messages avec des polices spéciales
+const formatResponse = (text) => {
   const fontMap = {
-    ' ': ' ',
-    'a': '𝗮', 'b': '𝗯', 'c': '𝗰', 'd': '𝗱', 'e': '𝗲', 'f': '𝗳', 'g': '𝗴', 'h': '𝗵',
-    'i': '𝗶', 'j': '𝗷', 'k': '𝗸', 'l': '𝗹', 'm': '𝗺', 'n': '𝗻', 'o': '𝗼', 'p': '𝗽', 'q': '𝗾',
-    'r': '𝗿', 's': '𝘀', 't': '𝘁', 'u': '𝘂', 'v': '𝘃', 'w': '𝘄', 'x': '𝘅', 'y': '𝘆', 'z': '𝘇',
-    'A': '𝗔', 'B': '𝗕', 'C': '𝗖', 'D': '𝗗', 'E': '𝗘', 'F': '𝗙', 'G': '𝗚', 'H': '𝗛',
-    'I': '𝗜', 'J': '𝗝', 'K': '𝗞', 'L': '𝗟', 'M': '𝗠', 'N': '𝗡', 'O': '𝗢', 'P': '𝗣', 'Q': '𝗤',
-    'R': '𝗥', 'S': '𝗦', 'T': '𝗧', 'U': '𝗨', 'V': '𝗩', 'W': '𝗪', 'X': '𝗫', 'Y': '𝗬', 'Z': '𝗭',
+    'a': '𝒶', 'b': '𝒷', 'c': '𝒸', 'd': '𝒹', 'e': '𝑒', 'f': '𝒻', 'g': '𝑔', 'h': '𝒽',
+    'i': '𝒾', 'j': '𝒿', 'k': '𝓀', 'l': '𝓁', 'm': '𝓂', 'n': '𝓃', 'o': '𝑜', 'p': '𝓅', 'q': '𝓆',
+    'r': '𝓇', 's': '𝓈', 't': '𝓉', 'u': '𝓊', 'v': '𝓋', 'w': '𝓌', 'x': '𝓍', 'y': '𝓎', 'z': '𝓏',
+    'A': '𝒜', 'B': '𝐵', 'C': '𝒞', 'D': '𝒟', 'E': '𝐸', 'F': '𝐹', 'G': '𝒢', 'H': '𝐻',
+    'I': '𝐼', 'J': '𝒥', 'K': '𝒦', 'L': '𝐿', 'M': '𝑀', 'N': '𝒩', 'O': '𝒪', 'P': '𝒫', 'Q': '𝒬',
+    'R': '𝑅', 'S': '𝒮', 'T': '𝒯', 'U': '𝒰', 'V': '𝒱', 'W': '𝒲', 'X': '𝒳', 'Y': '𝒴', 'Z': '𝒵'
   };
+  
+  return text.split('').map(char => fontMap[char] || char).join('');
+};
 
-  return responseText.split('').map(char => fontMap[char] || char).join('');
-  }
+// Message par défaut si aucune requête n'est fournie
+const getDefaultMessage = () => `
+⛷ 𝙅𝒆 𝒗𝒐𝒖𝒔 𝒑𝒓𝒊𝒆 ძe me ⍴résen𝗍er 𝒍𝒂 𝒒𝒖𝒆𝒔𝒕𝒊𝒐𝒏 𝙨𝙚𝙡𝙤𝙣 𝙫𝙤𝙩𝙧𝙚 préférence⚜,
+𝙚𝙩 𝙟𝙚 𝙢'𝙚𝙢𝙥𝙡𝙤𝙞𝙚𝙧𝙖𝙞 à 𝕧𝕠𝕦𝕤 𝕠𝕗𝕗𝕣𝕚𝕣 𝕦𝕟𝕖 réponse 𝕡𝕖𝕣𝕥𝕚𝕟𝕖𝕟𝕥𝕖 𝕖𝕥 adéquate. ❤  
+𝐒𝐚𝐜𝐡𝐞𝐳 𝐪𝐮𝐞 𝐯𝐨𝐭𝐫𝐞 𝐬𝐚𝐭𝐢𝐬𝐟𝐚𝐜𝐭𝐢𝐨𝐧 𝐝𝐞𝐦𝐞𝐮𝐫𝐞 𝐦𝐚 𝐩𝐫𝐢𝐨𝐫𝐢𝐭é à 𝐭𝐨𝐮𝐭𝐞𝐬 é𝐠𝐚𝐫𝐝𝐬 😉.  
+(merci pour votre attention)
+`;
