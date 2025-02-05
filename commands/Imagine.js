@@ -3,28 +3,24 @@ const { sendMessage } = require('../handles/sendMessage');
 
 module.exports = {
   name: 'imagine',
-  description: 'Generate an image using Lexica API.',
-  usage: '-imagine [image prompt]',
-  author: 'coffee',
-
+  description: 'Generates an image based on prompt',
+  author: 'DP',
   async execute(senderId, args, pageAccessToken) {
-    const prompt = args.join(' ').trim();
-    if (!prompt) return sendMessage(senderId, { text: 'Provide an image prompt.' }, pageAccessToken);
+    if (!args || !Array.isArray(args) || args.length === 0) {
+      await sendMessage(senderId, { text: 'Please provide a prompt for image generation.' }, pageAccessToken);
+      return;
+    }
 
-    const apiUrl = `https://lexica.art/api/v1/search?q=${encodeURIComponent(prompt)}`;
+    const prompt = args.join(' ');
 
     try {
-      const response = await axios.get(apiUrl);
+      const apiUrl = `https://ccprojectsjonellapis-production.up.railway.app/api/generate-art?prompt=${encodeURIComponent(prompt)}`;
 
-      if (response.data && response.data.images && response.data.images.length > 0) {
-        const imgUrl = response.data.images[0].src; // Prend la première image trouvée
-        await sendMessage(senderId, { attachment: { type: 'image', payload: { url: imgUrl } } }, pageAccessToken);
-      } else {
-        sendMessage(senderId, { text: 'No image found for the given prompt.' }, pageAccessToken);
-      }
+      await sendMessage(senderId, { attachment: { type: 'image', payload: { url: apiUrl } } }, pageAccessToken);
+
     } catch (error) {
-      console.error('Error generating image:', error);
-      sendMessage(senderId, { text: 'An error occurred while generating the image.' }, pageAccessToken);
+      console.error('Error:', error);
+      await sendMessage(senderId, { text: 'Error: Could not generate image.' }, pageAccessToken);
     }
   }
 };
