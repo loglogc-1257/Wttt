@@ -36,9 +36,9 @@ const handleChatResponse = async (senderId, input, pageAccessToken) => {
 
     // Réponse stylisée avec un cadre élégant
     const finalMessage = `
-╭───────────────✧  
+╭───────────✧  
 │ 🤖 *Réponse IA*  
-╰───────────────✧  
+╰───────────✧  
 
 📌 𝗦𝗼𝗹𝘂𝘁𝗶𝗼𝗻 :  
 ➜ *${response}*  
