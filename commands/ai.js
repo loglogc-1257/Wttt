@@ -16,7 +16,7 @@ module.exports = {
     if (!query) return sendStyledMessage(senderId, getDefaultMessage(), token);
 
     if (["sino creator mo?", "who created you?"].includes(query)) {
-      return sendStyledMessage(senderId, "Stanley stawa ", token);
+      return sendStyledMessage(senderId, "👤 *Créateur :* 𝗔𝗿𝗻 / 𝗥𝘆𝗻𝘅 𝗚𝗮𝗶𝘀𝗲𝗿", token);
     }
 
     await handleChatResponse(senderId, query, token);
@@ -29,25 +29,26 @@ const handleChatResponse = async (senderId, input, pageAccessToken) => {
 
   try {
     // Message d'attente stylisé
-    await sendStyledMessage(senderId, "🤖 Mon cerveau d’IA turbine à plein régime ! Attendez un instant...", pageAccessToken);
+    await sendStyledMessage(senderId, "⏳ *Analyse en cours...* 𝑼𝒏𝒆 𝒊𝒏𝒕𝒆𝒍𝒍𝒊𝒈𝒆𝒏𝒄𝒆 𝒂𝒓𝒕𝒊𝒇𝒊𝒄𝒊𝒆𝒍𝒍𝒆 𝒓𝒆́𝒇𝒍𝒆́𝒄𝒉𝒊𝒕 𝒂𝒖𝒔𝒔𝒊 !", pageAccessToken);
     
     const { data } = await axios.get(apiUrl, { params: { q: input, uid: senderId } });
     const response = data.response;
 
-    // Réponse stylisée avec un effet unique
+    // Réponse stylisée avec un cadre élégant
     const finalMessage = `
-╔════════════════════╗
-  🎙️ *Réponse de l'IA Mickey * 🎙️
-╚════════════════════╝
+╭───────────────✧  
+│ 🤖 *Réponse IA*  
+╰───────────────✧  
 
-💡 *${response}* 💡
+📌 𝗦𝗼𝗹𝘂𝘁𝗶𝗼𝗻 :  
+➜ *${response}*  
 
-✨ Posez-moi une autre question ! ✨`;
+💡 *Besoin d’une autre réponse ? Posez-moi votre question !*`;
 
     await sendStyledMessage(senderId, finalMessage, pageAccessToken);
   } catch (error) {
     console.error('Erreur lors de la récupération de la réponse IA:', error.message);
-    await sendStyledMessage(senderId, "❌ Oups, une erreur s'est produite.", pageAccessToken);
+    await sendStyledMessage(senderId, "❌ *Oups, une erreur s'est produite. Veuillez réessayer plus tard.*", pageAccessToken);
   }
 };
 
@@ -57,24 +58,64 @@ const sendStyledMessage = async (senderId, text, pageAccessToken) => {
   await sendMessage(senderId, { text: formattedText }, pageAccessToken);
 };
 
-// Formatage des messages avec des polices spéciales
+// Formatage des messages pour plus de visibilité et de raffinement
 const formatResponse = (text) => {
-  const fontMap = {
-    'a': '𝒶', 'b': '𝒷', 'c': '𝒸', 'd': '𝒹', 'e': '𝑒', 'f': '𝒻', 'g': '𝑔', 'h': '𝒽',
-    'i': '𝒾', 'j': '𝒿', 'k': '𝓀', 'l': '𝓁', 'm': '𝓂', 'n': '𝓃', 'o': '𝑜', 'p': '𝓅', 'q': '𝓆',
-    'r': '𝓇', 's': '𝓈', 't': '𝓉', 'u': '𝓊', 'v': '𝓋', 'w': '𝓌', 'x': '𝓍', 'y': '𝓎', 'z': '𝓏',
-    'A': '𝒜', 'B': '𝐵', 'C': '𝒞', 'D': '𝒟', 'E': '𝐸', 'F': '𝐹', 'G': '𝒢', 'H': '𝐻',
-    'I': '𝐼', 'J': '𝒥', 'K': '𝒦', 'L': '𝐿', 'M': '𝑀', 'N': '𝒩', 'O': '𝒪', 'P': '𝒫', 'Q': '𝒬',
-    'R': '𝑅', 'S': '𝒮', 'T': '𝒯', 'U': '𝒰', 'V': '𝒱', 'W': '𝒲', 'X': '𝒳', 'Y': '𝒴', 'Z': '𝒵'
-  };
-  
-  return text.split('').map(char => fontMap[char] || char).join('');
+  return text
+    .replace(/a/g, '𝐚')
+    .replace(/b/g, '𝐛')
+    .replace(/c/g, '𝐜')
+    .replace(/d/g, '𝐝')
+    .replace(/e/g, '𝐞')
+    .replace(/f/g, '𝐟')
+    .replace(/g/g, '𝐠')
+    .replace(/h/g, '𝐡')
+    .replace(/i/g, '𝐢')
+    .replace(/j/g, '𝐣')
+    .replace(/k/g, '𝐤')
+    .replace(/l/g, '𝐥')
+    .replace(/m/g, '𝐦')
+    .replace(/n/g, '𝐧')
+    .replace(/o/g, '𝐨')
+    .replace(/p/g, '𝐩')
+    .replace(/q/g, '𝐪')
+    .replace(/r/g, '𝐫')
+    .replace(/s/g, '𝐬')
+    .replace(/t/g, '𝐭')
+    .replace(/u/g, '𝐮')
+    .replace(/v/g, '𝐯')
+    .replace(/w/g, '𝐰')
+    .replace(/x/g, '𝐱')
+    .replace(/y/g, '𝐲')
+    .replace(/z/g, '𝐳')
+    .replace(/A/g, '𝐀')
+    .replace(/B/g, '𝐁')
+    .replace(/C/g, '𝐂')
+    .replace(/D/g, '𝐃')
+    .replace(/E/g, '𝐄')
+    .replace(/F/g, '𝐅')
+    .replace(/G/g, '𝐆')
+    .replace(/H/g, '𝐇')
+    .replace(/I/g, '𝐈')
+    .replace(/J/g, '𝐉')
+    .replace(/K/g, '𝐊')
+    .replace(/L/g, '𝐋')
+    .replace(/M/g, '𝐌')
+    .replace(/N/g, '𝐍')
+    .replace(/O/g, '𝐎')
+    .replace(/P/g, '𝐏')
+    .replace(/Q/g, '𝐐')
+    .replace(/R/g, '𝐑')
+    .replace(/S/g, '𝐒')
+    .replace(/T/g, '𝐓')
+    .replace(/U/g, '𝐔')
+    .replace(/V/g, '𝐕')
+    .replace(/W/g, '𝐖')
+    .replace(/X/g, '𝐗')
+    .replace(/Y/g, '𝐘')
+    .replace(/Z/g, '𝐙');
 };
 
 // Message par défaut si aucune requête n'est fournie
 const getDefaultMessage = () => `
-⛷ 𝙅𝒆 𝒗𝒐𝒖𝒔 𝒑𝒓𝒊𝒆 ძe me ⍴résen𝗍er 𝒍𝒂 𝒒𝒖𝒆𝒔𝒕𝒊𝒐𝒏 𝙨𝙚𝙡𝙤𝙣 𝙫𝙤𝙩𝙧𝙚 préférence⚜,
-𝙚𝙩 𝙟𝙚 𝙢'𝙚𝙢𝙥𝙡𝙤𝙞𝙚𝙧𝙖𝙞 à 𝕧𝕠𝕦𝕤 𝕠𝕗𝕗𝕣𝕚𝕣 𝕦𝕟𝕖 réponse 𝕡𝕖𝕣𝕥𝕚𝕟𝕖𝕟𝕥𝕖 𝕖𝕥 adéquate. ❤  
-𝐒𝐚𝐜𝐡𝐞𝐳 𝐪𝐮𝐞 𝐯𝐨𝐭𝐫𝐞 𝐬𝐚𝐭𝐢𝐬𝐟𝐚𝐜𝐭𝐢𝐨𝐧 𝐝𝐞𝐦𝐞𝐮𝐫𝐞 𝐦𝐚 𝐩𝐫𝐢𝐨𝐫𝐢𝐭é à 𝐭𝐨𝐮𝐭𝐞𝐬 é𝐠𝐚𝐫𝐝𝐬 😉.  
-(merci pour votre attention)
-`;
+📌 *Veuillez entrer une question*  
+🤖 𝑱𝒆 𝒔𝒖𝒊𝒔 𝒑𝒓𝒆̂𝒕 𝒂̀ 𝒗𝒐𝒖𝒔 𝒓𝒆́𝒑𝒐𝒏𝒅𝒓𝒆 !`;
