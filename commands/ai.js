@@ -1,66 +1,95 @@
 const axios = require('axios');
 const { sendMessage } = require('../handles/sendMessage');
 const fs = require('fs');
-const token = fs.readFileSync('token.txt', 'utf8').trim();
+const token = fs.readFileSync('token.txt', 'utf8');
 
-const useFontFormatting = true; // Active ou désactive le formatage stylisé
+// Active ou désactive la mise en forme du texte
+const useFontFormatting = true;
 
 module.exports = {
   name: 'ai',
-  description: 'Interact with Free GPT - OpenAI.',
-  author: 'Arn',
+  description: 'Interagissez avec Orochi AI, votre assistant intelligent.',
+  author: 'Arn', // API par Kenlie Navacilla Jugarap
 
   async execute(senderId, args) {
+    const pageAccessToken = token;
     const query = args.join(" ").trim();
-    if (!query) return sendStyledMessage(senderId, getDefaultMessage(), token);
 
-    // Gestion spéciale pour "À quoi sert"
-    if (query.toLowerCase().startsWith("à quoi sert")) {
-      return sendStyledMessage(senderId, `🔎 *Explication :* ${await getExplanation(query)}`, token);
+    if (!query) {
+      const defaultMessage = 
+        "✨ Bonjour et bienvenue ! " +
+        "Posez-moi vos question🤖 " +
+        "\n\nVotre satisfaction est ma priorité ! 🚀\n\n_(Édité par Stanley stawa )_";
+      
+      const formattedMessage = useFontFormatting ? formatResponse(defaultMessage) : defaultMessage;
+      return await sendMessage(senderId, { text: formattedMessage }, pageAccessToken);
     }
 
-    await handleChatResponse(senderId, query, token);
+    if (query.toLowerCase() === "sino creator mo?" || query.toLowerCase() === "qui t'a créé ?") {
+      const creatorMessage = " Stanley stawa ";
+      const formattedMessage = useFontFormatting ? formatResponse(creatorMessage) : creatorMessage;
+      return await sendMessage(senderId, { text: formattedMessage }, pageAccessToken);
+    }
+
+    await handleChatResponse(senderId, query, pageAccessToken);
   },
 };
 
-// Fonction pour récupérer une explication rapide
-const getExplanation = async (query) => {
-  try {
-    const apiUrl = "https://kaiz-apis.gleeze.com/api/bert-ai";
-    const { data } = await axios.get(apiUrl, { params: { q: query, uid: "system" } });
-    return data.response || "Je n’ai pas d’information précise à ce sujet.";
-  } catch (error) {
-    console.error('Erreur API:', error.message);
-    return "❌ *Impossible de récupérer l'information pour le moment.*";
-  }
-};
-
-// Fonction principale pour gérer la réponse IA
 const handleChatResponse = async (senderId, input, pageAccessToken) => {
   const apiUrl = "https://kaiz-apis.gleeze.com/api/bert-ai";
 
   try {
     const { data } = await axios.get(apiUrl, { params: { q: input, uid: senderId } });
+    const response = data.response;
 
-    const finalMessage = `🤖 *Réponse IA*  
-📌 *${data.response}*  
-💡 *Pose-moi une autre question !*`;
+    const defaultMessage = `${response}`;
+    const formattedMessage = useFontFormatting ? formatResponse(defaultMessage) : defaultMessage;
 
-    await sendStyledMessage(senderId, finalMessage, pageAccessToken);
+    await sendConcatenatedMessage(senderId, formattedMessage, pageAccessToken);
   } catch (error) {
-    console.error('Erreur IA:', error.message);
-    await sendStyledMessage(senderId, "❌ *Erreur interne. Réessayez plus tard.*", pageAccessToken);
+    console.error('Erreur lors de la requête AI:', error.message);
+
+    const errorMessage = 
+      "⚠️ La patience est un don le savez-vous ? " +
+      "Faite preuve de patience je vous prie !";
+    
+    const formattedMessage = useFontFormatting ? formatResponse(errorMessage) : errorMessage;
+    await sendMessage(senderId, { text: formattedMessage }, pageAccessToken);
   }
 };
 
-// Fonction d'envoi de message optimisée
-const sendStyledMessage = async (senderId, text, pageAccessToken) => {
-  await sendMessage(senderId, { text: useFontFormatting ? formatResponse(text) : text }, pageAccessToken);
+const sendConcatenatedMessage = async (senderId, text, pageAccessToken) => {
+  const maxMessageLength = 2000;
+
+  if (text.length > maxMessageLength) {
+    const messages = splitMessageIntoChunks(text, maxMessageLength);
+    for (const message of messages) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      await sendMessage(senderId, { text: message }, pageAccessToken);
+    }
+  } else {
+    await sendMessage(senderId, { text }, pageAccessToken);
+  }
 };
 
-// Réduction du formatage pour accélérer l'affichage
-const formatResponse = (text) => text.replace(/A/g, '𝗔').replace(/B/g, '𝗕').replace(/C/g, '𝗖');
+const splitMessageIntoChunks = (message, chunkSize) => {
+  const chunks = [];
+  for (let i = 0; i < message.length; i += chunkSize) {
+    chunks.push(message.slice(i, i + chunkSize));
+  }
+  return chunks;
+};
 
-// Message par défaut
-const getDefaultMessage = () => `📌 *Veuillez entrer une question*  
-🤖 𝑱𝒆 𝒔𝒖𝒊𝒔 𝒑𝒓𝒆̂𝒕 𝒂̀ 𝒗𝒐𝒖𝒔 𝒓𝒆́𝒑𝒐𝒏𝒅𝒓𝒆 !`;
+// Fonction pour styliser le texte si activé
+function formatResponse(responseText) {
+  const fontMap = {
+    'a': '𝗮', 'b': '𝗯', 'c': '𝗰', 'd': '𝗱', 'e': '𝗲', 'f': '𝗳', 'g': '𝗴', 'h': '𝗵',
+    'i': '𝗶', 'j': '𝗷', 'k': '𝗸', 'l': '𝗹', 'm': '𝗺', 'n': '𝗻', 'o': '𝗼', 'p': '𝗽', 'q': '𝗾',
+    'r': '𝗿', 's': '𝘀', 't': '𝘁', 'u': '𝘂', 'v': '𝘃', 'w': '𝘄', 'x': '𝘅', 'y': '𝘆', 'z': '𝘇',
+    'A': '𝗔', 'B': '𝗕', 'C': '𝗖', 'D': '𝗗', 'E': '𝗘', 'F': '𝗙', 'G': '𝗚', 'H': '𝗛',
+    'I': '𝗜', 'J': '𝗝', 'K': '𝗞', 'L': '𝗟', 'M': '𝗠', 'N': '𝗡', 'O': '𝗢', 'P': '𝗣', 'Q': '𝗤',
+    'R': '𝗥', 'S': '𝗦', 'T': '𝗧', 'U': '𝗨', 'V': '𝗩', 'W': '𝗪', 'X': '𝗫', 'Y': '𝗬', 'Z': '𝗭',
+  };
+
+  return responseText.split('').map(char => fontMap[char] || char).join('');
+}
