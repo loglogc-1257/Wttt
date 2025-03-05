@@ -32,7 +32,7 @@ module.exports = {
 };
 
 const handleChatResponse = async (senderId, input, pageAccessToken) => {
-  const apiUrl = "https://kaiz-apis.gleeze.com/api/gpt-4o";
+  const apiUrl = "https://kaiz-apis.gleeze.com/api/gpt4o-mini";
 
   // Initialiser l'historique si l'utilisateur est nouveau
   if (!chatHistory[senderId]) {
@@ -66,7 +66,7 @@ const handleChatResponse = async (senderId, input, pageAccessToken) => {
 
 // Fonction pour gérer les messages longs tout en respectant l'ordre
 const sendLongMessage = async (senderId, message, pageAccessToken) => {
-  const maxLength = 600; // Longueur maximale par message
+  const maxLength = 9000; // Longueur maximale par message
   let parts = [];
 
   for (let i = 0; i < message.length; i += maxLength) {
