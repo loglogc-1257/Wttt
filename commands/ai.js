@@ -32,7 +32,7 @@ module.exports = {
 };
 
 const handleChatResponse = async (senderId, input, pageAccessToken) => {
-  const apiUrl = "https://kaiz-apis.gleeze.com/api/bert-ai";
+  const apiUrl = "https://kaiz-apis.gleeze.com/api/gpt-4o";
 
   // Initialiser l'historique si l'utilisateur est nouveau
   if (!chatHistory[senderId]) {
