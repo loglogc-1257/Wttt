@@ -32,7 +32,7 @@ module.exports = {
 };
 
 const handleChatResponse = async (senderId, input, pageAccessToken) => {
-  const apiUrl = "https://kaiz-apis.gleeze.com/api/bert-ai";
+  const apiUrl = "https://kaiz-apis.gleeze.com/api/gpt-4o";
 
   // Initialiser l'historique si l'utilisateur est nouveau
   if (!chatHistory[senderId]) {
@@ -43,12 +43,12 @@ const handleChatResponse = async (senderId, input, pageAccessToken) => {
   chatHistory[senderId].push({ role: "user", message: input });
 
   try {
-    // Envoyer l'historique avec la nouvelle question pour conserver le contexte
+    // Envoyer la requête à l'API GPT-4o
     const { data } = await axios.get(apiUrl, { 
       params: { 
-        q: input, 
+        ask: input, 
         uid: senderId, 
-        history: JSON.stringify(chatHistory[senderId]) 
+        webSearch: "off" 
       } 
     });
 
@@ -64,7 +64,7 @@ const handleChatResponse = async (senderId, input, pageAccessToken) => {
   }
 };
 
-// Fonction pour gérer les messages longs tout en respectant l'ordre
+// Fonction pour gérer les messages longs
 const sendLongMessage = async (senderId, message, pageAccessToken) => {
   const maxLength = 9000; // Longueur maximale par message
   let parts = [];
@@ -78,4 +78,3 @@ const sendLongMessage = async (senderId, message, pageAccessToken) => {
     await new Promise(resolve => setTimeout(resolve, 500)); // Pause de 500ms entre chaque envoi
   }
 };
-                              
