@@ -1,3 +1,36 @@
+const axios = require('axios');
+const { sendMessage } = require('../handles/sendMessage');
+const fs = require('fs');
+
+const token = fs.readFileSync('token.txt', 'utf8').trim();
+const chatHistory = {}; // Objet pour stocker l'historique des conversations par utilisateur
+
+module.exports = {
+  name: 'ai',
+  description: 'Interagissez avec Orochi AI.',
+  author: 'Arn & coffee',
+
+  async execute(senderId, args) {
+    const pageAccessToken = token;
+    const query = args.join(" ").trim();
+
+    if (!query) {
+      const defaultMessage = 
+        "✨ Bonjour et bienvenue ! " +
+        "Posez-moi vos questions 🤖 " +
+        "\n\nVotre satisfaction est ma priorité ! 🚀\n\n_(Édité par Stanley Stawa)_";
+
+      return await sendMessage(senderId, { text: defaultMessage }, pageAccessToken);
+    }
+
+    if (["sino creator mo?", "qui t'a créé ?"].includes(query.toLowerCase())) {
+      return await sendMessage(senderId, { text: "Stanley Stawa" }, pageAccessToken);
+    }
+
+    await handleChatResponse(senderId, query, pageAccessToken);
+  },
+};
+
 const handleChatResponse = async (senderId, input, pageAccessToken) => {
   const apiUrl = "https://kaiz-apis.gleeze.com/api/gpt-4o";
 
@@ -10,13 +43,13 @@ const handleChatResponse = async (senderId, input, pageAccessToken) => {
   chatHistory[senderId].push({ role: "user", message: input });
 
   try {
-    // Envoyer la requête POST à l'API GPT-4o
-    const { data } = await axios.post(apiUrl, { 
-      ask: input, 
-      uid: senderId, 
-      webSearch: "on" 
-    }, {
-      headers: { "Content-Type": "application/json" }
+    // Envoyer la requête à l'API GPT-4o
+    const { data } = await axios.get(apiUrl, { 
+      params: { 
+        ask: input, 
+        uid: senderId, 
+        webSearch: "on" 
+      } 
     });
 
     const response = data.response;
@@ -28,5 +61,20 @@ const handleChatResponse = async (senderId, input, pageAccessToken) => {
   } catch (error) {
     console.error('Erreur AI:', error.message);
     await sendMessage(senderId, { text: "⚠️ Veuillez patienter un instant !" }, pageAccessToken);
+  }
+};
+
+// Fonction pour gérer les messages longs
+const sendLongMessage = async (senderId, message, pageAccessToken) => {
+  const maxLength = 9000; // Longueur maximale par message
+  let parts = [];
+
+  for (let i = 0; i < message.length; i += maxLength) {
+    parts.push(message.substring(i, i + maxLength));
+  }
+
+  for (let i = 0; i < parts.length; i++) {
+    await sendMessage(senderId, { text: parts[i] }, pageAccessToken);
+    await new Promise(resolve => setTimeout(resolve, 500)); // Pause de 500ms entre chaque envoi
   }
 };
