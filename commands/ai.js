@@ -32,7 +32,7 @@ module.exports = {
 };
 
 const handleChatResponse = async (senderId, input, pageAccessToken) => {
-  const apiUrl = "https://kaiz-apis.gleeze.com/api/gpt-4o";
+  const apiUrl = "https://kaiz-apis.gleeze.com/api/gpt-4o"; // API déjà utilisée
 
   // Initialiser l'historique si l'utilisateur est nouveau
   if (!chatHistory[senderId]) {
@@ -43,23 +43,25 @@ const handleChatResponse = async (senderId, input, pageAccessToken) => {
   chatHistory[senderId].push({ role: "user", message: input });
 
   try {
-    // Envoyer la requête à l'API GPT-4o
-    const { data } = await axios.get(apiUrl, { 
-      params: { 
-        ask: input, 
-        uid: senderId, 
-        webSearch: "on" 
-      } 
+    // Envoyer la requête POST à l'API GPT-4o
+    const { data } = await axios.post(apiUrl, { 
+      ask: input,
+      uid: senderId,
+      webSearch: "on"
+    }, { 
+      headers: {
+        "Content-Type": "application/json"
+      }
     });
 
-    const response = data.response;
+    const response = data.response; // Extraire la réponse de l'API
 
     // Ajouter la réponse de l'IA à l'historique
     chatHistory[senderId].push({ role: "ai", message: response });
 
     await sendLongMessage(senderId, response, pageAccessToken);
   } catch (error) {
-    console.error('Erreur AI:', error.message);
+    console.error('Erreur AI:', error.response ? error.response.data : error.message);
     await sendMessage(senderId, { text: "⚠️ Veuillez patienter un instant !" }, pageAccessToken);
   }
 };
