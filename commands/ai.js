@@ -48,7 +48,7 @@ const handleChatResponse = async (senderId, input, pageAccessToken) => {
       params: { 
         ask: input, 
         uid: senderId, 
-        webSearch: "off" 
+        webSearch: "on" 
       } 
     });
 
