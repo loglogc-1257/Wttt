@@ -1,80 +1,33 @@
 const axios = require('axios');
 const { sendMessage } = require('../handles/sendMessage');
-const fs = require('fs');
-
-const token = fs.readFileSync('token.txt', 'utf8').trim();
-const chatHistory = {}; // Objet pour stocker l'historique des conversations par utilisateur
 
 module.exports = {
-  name: 'ai',
-  description: 'Interagissez avec Orochi AI.',
-  author: 'Arn & coffee',
+  name: 'gpt4',
+  description: 'Interact with GPT-4o',
+  usage: 'gpt4 [your message]',
+  author: 'coffee',
 
-  async execute(senderId, args) {
-    const pageAccessToken = token;
-    const query = args.join(" ").trim();
+  async execute(senderId, args, pageAccessToken) {
+    const prompt = args.join(' ');
+    if (!prompt) return sendMessage(senderId, { text: "Veuillez poser votre question ou tapez 'help' pour voir les autres commandes disponibles." }, pageAccessToken);
 
-    if (!query) {
-      const defaultMessage = 
-        "✨ Bonjour et bienvenue ! " +
-        "Posez-moi vos questions 🤖 " +
-        "\n\nVotre satisfaction est ma priorité ! 🚀\n\n_(Édité par Stanley Stawa)_";
+    try {
+      const { data: { response } } = await axios.get(`https://kaiz-apis.gleeze.com/api/gpt-4o?ask=${encodeURIComponent(prompt)}&uid=${senderId}&webSearch=On`);
+      const parts = [];
 
-      return await sendMessage(senderId, { text: defaultMessage }, pageAccessToken);
+      for (let i = 0; i < response.length; i += 1800) {
+        parts.push(response.substring(i, i + 1800));
+      }
+      
+      // send all msg parts
+      for (const part of parts) {
+        await sendMessage(senderId, { text: part }, pageAccessToken);
+      }
+    } catch {
+      sendMessage(senderId, { 
+        text: "🤖 Oups ! Une petite erreur est survenue.\n\n" +
+              "❓ Veuillez poser votre question ou tapez 'help' pour voir les autres commandes disponibles."
+      }, pageAccessToken);
     }
-
-    if (["sino creator mo?", "qui t'a créé ?"].includes(query.toLowerCase())) {
-      return await sendMessage(senderId, { text: "Stanley Stawa" }, pageAccessToken);
-    }
-
-    await handleChatResponse(senderId, query, pageAccessToken);
-  },
-};
-
-const handleChatResponse = async (senderId, input, pageAccessToken) => {
-  const apiUrl = "https://kaiz-apis.gleeze.com/api/gpt-4o";
-
-  // Initialiser l'historique si l'utilisateur est nouveau
-  if (!chatHistory[senderId]) {
-    chatHistory[senderId] = [];
-  }
-
-  // Ajouter la question à l'historique
-  chatHistory[senderId].push({ role: "user", message: input });
-
-  try {
-    // Envoyer la requête à l'API GPT-4o
-    const { data } = await axios.get(apiUrl, { 
-      params: { 
-        ask: input, 
-        uid: senderId, 
-        webSearch: "on" 
-      } 
-    });
-
-    const response = data.response;
-
-    // Ajouter la réponse de l'IA à l'historique
-    chatHistory[senderId].push({ role: "ai", message: response });
-
-    await sendLongMessage(senderId, response, pageAccessToken);
-  } catch (error) {
-    console.error('Erreur AI:', error.message);
-    await sendMessage(senderId, { text: "⚠️ Veuillez patienter un instant !" }, pageAccessToken);
-  }
-};
-
-// Fonction pour gérer les messages longs
-const sendLongMessage = async (senderId, message, pageAccessToken) => {
-  const maxLength = 9000; // Longueur maximale par message
-  let parts = [];
-
-  for (let i = 0; i < message.length; i += maxLength) {
-    parts.push(message.substring(i, i + maxLength));
-  }
-
-  for (let i = 0; i < parts.length; i++) {
-    await sendMessage(senderId, { text: parts[i] }, pageAccessToken);
-    await new Promise(resolve => setTimeout(resolve, 500)); // Pause de 500ms entre chaque envoi
   }
 };
