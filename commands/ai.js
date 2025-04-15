@@ -12,14 +12,13 @@ module.exports = {
     if (!prompt) return sendMessage(senderId, { text: "Veuillez poser votre question ou tapez 'help' pour voir les autres commandes disponibles." }, pageAccessToken);
 
     try {
-      const { data: { response } } = await axios.get(`https://kaiz-apis.gleeze.com/api/gpt-4o?ask=${encodeURIComponent(prompt)}&uid=${senderId}&webSearch=On`);
+      const { data: { response } } = await axios.get(`https://kaiz-apis.gleeze.com/api/gpt-4o-pro?ask=${encodeURIComponent(prompt)}&uid=${senderId}`);
       const parts = [];
 
       for (let i = 0; i < response.length; i += 1800) {
         parts.push(response.substring(i, i + 1800));
       }
       
-      // send all msg parts
       for (const part of parts) {
         await sendMessage(senderId, { text: part }, pageAccessToken);
       }
