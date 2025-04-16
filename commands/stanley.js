@@ -2,10 +2,10 @@ const axios = require('axios');
 const { sendMessage } = require('../handles/sendMessage');
 
 module.exports = {
-  name: 'ai',
+  name: 's',
   description: 'Utilise Humanizer si la question commence par S',
   usage: 'S [votre message]',
-  author: 'coffee',
+  author: 'coffe',
 
   async execute(senderId, args, pageAccessToken) {
     const fullMessage = args.join(' ').trim();
