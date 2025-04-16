@@ -1,44 +1,30 @@
 const axios = require('axios');
 const { sendMessage } = require('../handles/sendMessage');
 
-const stanleyUsers = new Set();
-
 module.exports = {
-  name: 'stanley',
-  description: 'Active le mode Stanley pour humaniser les messages.',
-  usage: 'stanley / stanley off / message',
+  name: 'ai',
+  description: 'Utilise Humanizer si la question commence par S',
+  usage: 'S [votre message]',
   author: 'coffee',
 
   async execute(senderId, args, pageAccessToken) {
-    const message = args.join(' ').trim().toLowerCase();
+    const fullMessage = args.join(' ').trim();
 
-    // Activation
-    if (message === 'stanley' || message === 'on') {
-      stanleyUsers.add(senderId);
-      return sendMessage(senderId, {
-        text: "Stanley est activé. Tous vos messages seront humanisés."
-      }, pageAccessToken);
-    }
+    // Si le message commence par "S ", alors utilise l'API Humanizer
+    if (/^s\s+/i.test(fullMessage)) {
+      const question = fullMessage.replace(/^s\s+/i, ''); // supprime le S et l’espace
 
-    // Désactivation
-    if (message === 'stanley off' || message === 'off') {
-      stanleyUsers.delete(senderId);
-      return; // Pas de réponse
-    }
-
-    // Traitement si Stanley actif
-    if (stanleyUsers.has(senderId)) {
       try {
-        const { data } = await axios.get(`https://kaiz-apis.gleeze.com/api/humanizer?q=${encodeURIComponent(args.join(' '))}`);
+        const { data } = await axios.get(`https://kaiz-apis.gleeze.com/api/humanizer?q=${encodeURIComponent(question)}`);
         return sendMessage(senderId, { text: data.response }, pageAccessToken);
       } catch {
         return sendMessage(senderId, {
-          text: "🤖 Une erreur est survenue avec Stanley. Réessaie plus tard."
+          text: "🤖 Une erreur est survenue avec Humanizer. Réessaie plus tard."
         }, pageAccessToken);
       }
     }
 
-    // Si Stanley désactivé → ne rien envoyer
+    // Sinon : ne rien faire ou laisser passer à d'autres commandes
     return;
   }
 };
