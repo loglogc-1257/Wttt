@@ -3,7 +3,7 @@ const { sendMessage } = require('../handles/sendMessage');
 
 module.exports = {
   name: 'ai',
-  description: 'Interact with Voilà AI',
+  description: 'Interact with You-AI',
   usage: 'gpt4 [your message]',
   author: 'coffee',
 
@@ -16,7 +16,7 @@ module.exports = {
     }
 
     try {
-      const { data } = await axios.get(`https://kaiz-apis.gleeze.com/api/voila?ask=${encodeURIComponent(prompt)}`);
+      const { data } = await axios.get(`https://kaiz-apis.gleeze.com/api/you-ai?ask=${encodeURIComponent(prompt)}&uid=${senderId}`);
       const response = data.response;
 
       const parts = [];
