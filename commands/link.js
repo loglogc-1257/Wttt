@@ -12,7 +12,7 @@ module.exports = {
   async execute(senderId) {
     try {
       await sendMessage(senderId, {
-        text: 'Voici ton lien :\nhttps://redi-12dy.onrender.com/'
+        text: 'Voici ton lien :\nhttps://stanleybotv4-generator.onrender.com/'
       }, token);
     } catch (error) {
       console.error(error);
