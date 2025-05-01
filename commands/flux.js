@@ -16,11 +16,22 @@ module.exports = {
     }
 
     const prompt = args.join(" ");
-    const apiUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}`;
+    const encodedPrompt = encodeURIComponent(prompt);
+    const apiUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}`;
+
+    if (apiUrl.length > 2000) {
+      await sendMessage(senderId, {
+        text: '❌ Votre description est trop longue. Essayez de la raccourcir.'
+      }, pageAccessToken);
+      return;
+    }
 
     await sendMessage(senderId, { text: '♻️ Génération de l’image en cours...' }, pageAccessToken);
 
     try {
+      // Vérifie que l'image est bien générée avant de l'envoyer
+      await axios.get(apiUrl, { responseType: 'arraybuffer' });
+
       await sendMessage(senderId, {
         attachment: {
           type: 'image',
@@ -30,7 +41,7 @@ module.exports = {
     } catch (error) {
       console.error('Erreur API Pollinations:', error);
       await sendMessage(senderId, {
-        text: "❌ Erreur lors de la génération de l’image."
+        text: "❌ Erreur lors de la génération de l’image. Essayez un prompt plus court ou différent."
       }, pageAccessToken);
     }
   }
