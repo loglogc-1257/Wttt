@@ -2,48 +2,66 @@ const axios = require('axios');
 const { sendMessage } = require('../handles/sendMessage');
 
 module.exports = {
-  name: 'ai',
-  description: 'Interact with You-AI',
-  usage: 'gpt4 [your message]',
-  author: 'coffee',
+  name: 'ai',
+  description: 'Interact with You-AI',
+  usage: 'gpt4 [your message]',
+  author: 'coffee',
 
-  async execute(senderId, args, pageAccessToken) {
-    const prompt = args.join(' ');
-    if (!prompt) {
-      return sendMessage(senderId, {
-        text: "Veuillez poser votre question ou tapez 'help' pour voir les autres commandes disponibles."
-      }, pageAccessToken);
-    }
+  async execute(senderId, args, pageAccessToken) {
+    const prompt = args.join(' ');
+    if (!prompt) {
+      return sendMessage(senderId, {
+        text: "Veuillez poser votre question ou tapez 'help' pour voir les autres commandes disponibles."
+      }, pageAccessToken);
+    }
 
-    try {
-      const { data } = await axios.get(`https://kaiz-apis.gleeze.com/api/gpt-4o-pro?ask=${encodeURIComponent(prompt)}&uid=${senderId}&imageUrl=&apikey=7a8e29cc-18c8-4e69-99ef-209169503342`);
+    try {
+      const { data } = await axios.get(`https://kaiz-apis.gleeze.com/api/gpt-4o-pro?ask=${encodeURIComponent(prompt)}&uid=${senderId}&imageUrl=&apikey=7a8e29cc-18c8-4e69-99ef-209169503342`);
 
-      const responseText = data.response || '';
-      const imageUrl = data.images || null;
+      if (data.response) {
+        // Cas 1 : réponse textuelle normale
+        const parts = [];
+        for (let i = 0; i < data.response.length; i += 1800) {
+          parts.push(data.response.substring(i, i + 1800));
+        }
 
-      // Découpage si réponse trop longue
-      const parts = [];
-      for (let i = 0; i < responseText.length; i += 1800) {
-        parts.push(responseText.substring(i, i + 1800));
-      }
+        for (const part of parts) {
+          await sendMessage(senderId, { text: part }, pageAccessToken);
+        }
 
-      for (const part of parts) {
-        await sendMessage(senderId, { text: part }, pageAccessToken);
-      }
+        if (data.images) {
+          await sendMessage(senderId, {
+            text: `Voici l'image générée : ${data.images}`
+          }, pageAccessToken);
+        }
 
-      // Envoi du lien image en texte s'il existe
-      if (imageUrl) {
-        await sendMessage(senderId, {
-          text: `Voici l'image générée : ${imageUrl}`
-        }, pageAccessToken);
-      }
+      } else if (data.results && Array.isArray(data.results)) {
+        // Cas 2 : résultats type recherche (liste d'objets)
+        const formattedResults = data.results.map((item, index) => {
+          return `*${index + 1}. ${item.title}*\n${item.snippet}\n${item.link}`;
+        }).join('\n\n');
 
-    } catch (err) {
-      console.error("Erreur API AI:", err.message || err);
-      sendMessage(senderId, {
-        text: "🤖 Oups ! Une petite erreur est survenue.\n\n" +
-              "❓ Veuillez poser votre question ou tapez 'help' pour voir les autres commandes disponibles."
-      }, pageAccessToken);
-    }
-  }
+        const parts = [];
+        for (let i = 0; i < formattedResults.length; i += 1800) {
+          parts.push(formattedResults.substring(i, i + 1800));
+        }
+
+        for (const part of parts) {
+          await sendMessage(senderId, { text: part }, pageAccessToken);
+        }
+
+      } else {
+        await sendMessage(senderId, {
+          text: "Aucune réponse valide reçue de l'API."
+        }, pageAccessToken);
+      }
+
+    } catch (err) {
+      console.error("Erreur API AI:", err.message || err);
+      sendMessage(senderId, {
+        text: "🤖 Oups ! Une petite erreur est survenue.\n\n" +
+              "❓ Veuillez poser votre question ou tapez 'help' pour voir les autres commandes disponibles."
+      }, pageAccessToken);
+    }
+  }
 };
