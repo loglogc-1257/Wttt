@@ -16,7 +16,7 @@ module.exports = {
     }
 
     try {
-      const { data } = await axios.get(`https://kaiz-apis.gleeze.com/api/you-ai?ask=${encodeURIComponent(prompt)}&uid=${senderId}`);
+      const { data } = await axios.get(`https://kaiz-apis.gleeze.com/api/gpt-4o-pro?ask=${encodeURIComponent(prompt)}&uid=${senderId}&imageUrl=&apikey=7a8e29cc-18c8-4e69-99ef-209169503342`);
       const response = data.response;
 
       const parts = [];
