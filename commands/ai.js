@@ -16,10 +16,10 @@ module.exports = {
     }
 
     try {
-      const { data } = await axios.get(`https://kaiz-apis.gleeze.com/api/gpt-4o-pro?ask=${encodeURIComponent(prompt)}&uid=${senderId}&imageUrl=&apikey=7a8e29cc-18c8-4e69-99ef-209169503342`);
+      const { data } = await axios.get(`https://kaiz-apis.gleeze.com/api/gpt-4.1?ask=${encodeURIComponent(prompt)}&uid=${senderId}&imageUrl=&apikey=7a8e29cc-18c8-4e69-99ef-209169503342`);
 
       if (data.response) {
-        // Cas 1 : réponse textuelle normale
+        // Réponse textuelle
         const parts = [];
         for (let i = 0; i < data.response.length; i += 1800) {
           parts.push(data.response.substring(i, i + 1800));
@@ -33,21 +33,6 @@ module.exports = {
           await sendMessage(senderId, {
             text: `Voici l'image générée : ${data.images}`
           }, pageAccessToken);
-        }
-
-      } else if (data.results && Array.isArray(data.results)) {
-        // Cas 2 : résultats type recherche (liste d'objets)
-        const formattedResults = data.results.map((item, index) => {
-          return `*${index + 1}. ${item.title}*\n${item.snippet}\n${item.link}`;
-        }).join('\n\n');
-
-        const parts = [];
-        for (let i = 0; i < formattedResults.length; i += 1800) {
-          parts.push(formattedResults.substring(i, i + 1800));
-        }
-
-        for (const part of parts) {
-          await sendMessage(senderId, { text: part }, pageAccessToken);
         }
 
       } else {
