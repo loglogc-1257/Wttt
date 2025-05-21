@@ -1,4 +1,3 @@
-const axios = require('axios');
 const { sendMessage } = require('../handles/sendMessage');
 
 module.exports = {
@@ -16,20 +15,18 @@ module.exports = {
     }
 
     const prompt = args.join(" ");
-    const apiUrl = `https://kaiz-apis.gleeze.com/api/stable-diffusion-3.5-rev2?prompt=${encodeURIComponent(prompt)}&apikey=7a8e29cc-18c8-4e69-99ef-209169503342`;
+    const imageUrl = `https://kaiz-apis.gleeze.com/api/stable-diffusion-3.5-rev2?prompt=${encodeURIComponent(prompt)}&apikey=7a8e29cc-18c8-4e69-99ef-209169503342`;
 
     await sendMessage(senderId, { text: '♻️ Génération en cours...' }, pageAccessToken);
 
     try {
-      const response = await axios.get(apiUrl);
-      const imageUrl = response.data.url || apiUrl; // Fallback au cas où l'API retourne directement l'image
-
       await sendMessage(senderId, {
         attachment: { type: 'image', payload: { url: imageUrl } }
       }, pageAccessToken);
     } catch (error) {
-      console.error('Erreur API Flux:', error);
+      console.error('Erreur API Flux:', error.message || error);
       await sendMessage(senderId, { text: "❌ Erreur lors de la génération de l’image." }, pageAccessToken);
     }
   }
 };
+        
