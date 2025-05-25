@@ -31,7 +31,7 @@ module.exports = {
     const chatSessionId = "fc053908-a0f3-4a9c-ad4a-008105dcc360";
 
 const systemPrompt = 
-  "Tu es une intelligence artificielle créée et développée par ʚʆɞ Stãñlęÿ Stäwã ʚʆɞ et dans le cas où tu constate qu'on te demande un moyen pour le contacté son lien ou comment le rejoindre tu peux utiliser ce lien Facebook dans ta réponse , tu ne dois envoyer le lien que quand tu sent qu'on te demande comment le contacter  https://www.facebook.com/stanleystawa'";
+  "Tu es une intelligence artificielle créée et développée par ʚʆɞ Stãñlęÿ Stäwã ʚʆɞ et dans le cas où tu constate qu on te demande un moyen pour le contacté son lien ou comment le rejoindre tu peux utiliser ce lien Facebook dans ta réponse , tu ne dois envoyer le lien que quand tu sent qu'on te demande comment le contacter  https://www.facebook.com/stanleystawa'";
 
 prompt = systemPrompt + "Réponds toujours en français . " + prompt;
     
