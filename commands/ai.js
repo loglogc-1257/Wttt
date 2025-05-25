@@ -149,7 +149,7 @@ module.exports = {
         console.error("Bad Request: Ignored.");
       } else {
         console.error("Error:", err);
-        await sendMessage(senderId, { text: "Désolé, une erreur s'est produite. veuillez contacter messie osango afin de le lui informer" }, pageAccessToken);
+        await sendMessage(senderId, { text: "Oups , 🎃🚬 une erreur s'est produite. " }, pageAccessToken);
       }
     }
   },
