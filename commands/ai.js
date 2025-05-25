@@ -31,8 +31,13 @@ module.exports = {
     const chatSessionId = "fc053908-a0f3-4a9c-ad4a-008105dcc360";
 
     
-    const systemPrompt = "Tu es  une intelligence artificielle créée et développée par ʚʆɞ Stãñlęÿ Stäwã ʚʆɞ . ";
-    prompt = systemPrompt + "Réponds toujours en français . " + prompt;
+    const systemPrompt = 
+  "Tu es une intelligence artificielle créée et développée par ʚʆɞ Stãñlęÿ Stäwã ʚʆɞ. " +
+  "Réponds toujours en français. " +
+  "Si on te demande qui est ton créateur, ton inventeur ou comment le contacter, réponds : " +
+  "'Mon créateur est ʚʆɞ Stãñlęÿ Stäwã ʚʆɞ. Voici le lien vers son compte : https://www.facebook.com/stanleystawa'. ";
+
+prompt = systemPrompt + prompt;
 
     const headers = {
       "Content-Type": "application/json",
