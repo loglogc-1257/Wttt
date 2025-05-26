@@ -34,16 +34,12 @@ module.exports = {
         conversationHistory[senderId] = [];
       }
 
-      // Ajoute la question utilisateur à l'historique
       conversationHistory[senderId].push({ role: 'user', content: prompt });
 
-      // Garde uniquement les 5 derniers échanges (user + assistant)
       if (conversationHistory[senderId].length > 10) {
         conversationHistory[senderId] = conversationHistory[senderId].slice(-10);
       }
 
-      // Compose un prompt combiné à partir de l'historique
-      // Format simple : "User: ... \n Assistant: ..."
       let combinedPrompt = conversationHistory[senderId]
         .map(msg => (msg.role === 'user' ? 'Utilisateur: ' : 'Assistant: ') + msg.content)
         .join('\n') + '\nAssistant:';
@@ -53,26 +49,48 @@ module.exports = {
         combinedPrompt += `\n[Image URL: ${imageUrl}]`;
       }
 
-      const encodedPrompt = encodeURIComponent(combinedPrompt);
+      let responseText;
 
-      const { data } = await axios.get(
-        `https://api.zetsu.xyz/api/copilot`,
-        {
+      try {
+        // Zetsu
+        const encodedPrompt = encodeURIComponent(combinedPrompt);
+        const zetsuResponse = await axios.get(`https://api.zetsu.xyz/api/copilot`, {
           params: {
             prompt: encodedPrompt,
             apikey: 'dfc3db8eeb9991ebed1880d4b153625f'
           }
-        }
-      );
+        });
 
-      const fullResponseText = data?.result || data?.response || data;
+        responseText = zetsuResponse.data?.result || zetsuResponse.data?.response;
 
-      if (!fullResponseText) {
-        throw new Error('Réponse vide de l’IA.');
+        if (!responseText) throw new Error("Zetsu a répondu vide.");
+      } catch (zetsuError) {
+        console.warn("Zetsu indisponible. Bascule vers Gemini...");
+
+        // Gemini fallback
+        const geminiRes = await axios.post(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyDIGG4puPZ6kPIUR0CSD6fOgh6PNWqYFuM`,
+          {
+            contents: [
+              {
+                parts: [{ text: combinedPrompt }],
+                role: 'user'
+              }
+            ]
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        responseText = geminiRes.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        if (!responseText) throw new Error("Réponse vide de Gemini.");
       }
 
-      // Ajoute la réponse de l'assistant à l'historique
-      conversationHistory[senderId].push({ role: 'assistant', content: fullResponseText });
+      conversationHistory[senderId].push({ role: 'assistant', content: responseText });
 
       const chunkMessage = (message, maxLength) => {
         const chunks = [];
@@ -82,14 +100,14 @@ module.exports = {
         return chunks;
       };
 
-      const messageChunks = chunkMessage(fullResponseText, 1900);
+      const messageChunks = chunkMessage(responseText, 1900);
       for (const chunk of messageChunks) {
         await sendMessage(senderId, { text: chunk }, pageAccessToken);
       }
 
     } catch (err) {
-      console.error("Erreur:", err?.response?.data || err.message);
-      await sendMessage(senderId, { text: "Oups, 🎃🚬 une erreur s'est produite." }, pageAccessToken);
+      console.error("Erreur finale:", err?.response?.data || err.message);
+      await sendMessage(senderId, { text: "Les deux IA sont inaccessibles pour le moment." }, pageAccessToken);
     }
   },
 };
