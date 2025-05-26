@@ -18,8 +18,6 @@ const getImageUrl = async (event, token) => {
   }
 };
 
-const conversationHistory = {};
-
 module.exports = {
   name: 'ai',
   description: 'Interact with Mocha AI using text queries and image analysis',
@@ -27,57 +25,37 @@ module.exports = {
   author: 'Messie Osango',
 
   async execute(senderId, args, pageAccessToken, event) {
-    let prompt = args.join(' ').trim() || 'Hello';
+    let userPrompt = args.join(' ').trim() || 'Hello';
 
     const systemPrompt = 
-      "Tu es une intelligence artificielle créée et développée par ʚʆɞ Stãñlęÿ Stäwã ʚʆɞ et dans le cas où tu constate qu on te demande un moyen pour le contacté son lien ou comment le rejoindre tu peux utiliser ce lien Facebook dans ta réponse , tu ne dois envoyer le lien que quand tu sent qu'on te demande comment le contacter  https://www.facebook.com/stanleystawa'";
-    
-    prompt = systemPrompt + " Réponds toujours en français. " + prompt;
+      "Tu es une intelligence artificielle créée et développée par ʚʆɞ Stãñlęÿ Stäwã ʚʆɞ. Si on te demande comment le contacter, donne ce lien Facebook : https://www.facebook.com/stanleystawa. Réponds toujours en français.\n\n";
+
+    const finalPrompt = systemPrompt + userPrompt;
+
+    const imageUrl = await getImageUrl(event, pageAccessToken);
+    const fullPrompt = imageUrl ? `${finalPrompt}\n\nImage liée : ${imageUrl}` : finalPrompt;
 
     try {
-      if (!conversationHistory[senderId]) {
-        conversationHistory[senderId] = [];
+      const response = await axios.get(`https://api.zetsu.xyz/api/copilot`, {
+        params: { prompt: fullPrompt }
+      });
+
+      const reply = response?.data?.result || response?.data?.response || response?.data;
+
+      if (!reply) {
+        await sendMessage(senderId, { text: "Désolé, je n'ai pas pu obtenir de réponse de l'IA." }, pageAccessToken);
+        return;
       }
 
-      conversationHistory[senderId].push({ role: 'user', content: prompt });
-
-      const chunkMessage = (message, maxLength) => {
-        const chunks = [];
-        for (let i = 0; i < message.length; i += maxLength) {
-          chunks.push(message.slice(i, i + maxLength));
-        }
-        return chunks;
-      };
-
-      const imageUrl = await getImageUrl(event, pageAccessToken);
-
-      if (imageUrl) {
-        prompt += `\nImage URL: ${imageUrl}`;
-      }
-
-      const encodedPrompt = encodeURIComponent(prompt);
-      const { data } = await axios.get(`https://api.zetsu.xyz/api/copilot?prompt=${encodedPrompt}`);
-
-      const fullResponseText = data?.result || data?.response || data;
-
-      if (!fullResponseText) {
-        throw new Error('Réponse vide de l’IA.');
-      }
-
-      conversationHistory[senderId].push({ role: 'assistant', content: fullResponseText });
-
-      const messageChunks = chunkMessage(fullResponseText, 1900);
-      for (const chunk of messageChunks) {
+      // Découpe si trop long
+      const chunks = reply.match(/.{1,1900}/gs) || [reply];
+      for (const chunk of chunks) {
         await sendMessage(senderId, { text: chunk }, pageAccessToken);
       }
 
     } catch (err) {
-      if (err.response && err.response.status === 400) {
-        console.error("Bad Request: Ignored.");
-      } else {
-        console.error("Error:", err);
-        await sendMessage(senderId, { text: "Oups , 🎃🚬 une erreur s'est produite. " }, pageAccessToken);
-      }
+      console.error("Erreur API Zetsu:", err?.response?.data || err.message);
+      await sendMessage(senderId, { text: "Une erreur est survenue lors de la communication avec l'IA." }, pageAccessToken);
     }
   },
 };
