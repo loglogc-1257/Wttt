@@ -29,39 +29,38 @@ module.exports = {
   async execute(senderId, args, pageAccessToken, event) {
     let prompt = args.join(' ').trim() || 'Hello';
 
-    const systemPrompt =
-      "Tu es une intelligence artificielle créée et développée par ʚʆɞ Stãñlęÿ Stäwã ʚʆɞ. Si on te demande comment le contacter, utilise ce lien Facebook : https://www.facebook.com/stanleystawa. Réponds toujours en français.\n\n";
-
-    prompt = systemPrompt + prompt;
-
     try {
       if (!conversationHistory[senderId]) {
         conversationHistory[senderId] = [];
       }
 
+      // Ajoute la question utilisateur à l'historique
       conversationHistory[senderId].push({ role: 'user', content: prompt });
 
-      const chunkMessage = (message, maxLength) => {
-        const chunks = [];
-        for (let i = 0; i < message.length; i += maxLength) {
-          chunks.push(message.slice(i, i + maxLength));
-        }
-        return chunks;
-      };
+      // Garde uniquement les 5 derniers échanges (user + assistant)
+      if (conversationHistory[senderId].length > 10) {
+        conversationHistory[senderId] = conversationHistory[senderId].slice(-10);
+      }
+
+      // Compose un prompt combiné à partir de l'historique
+      // Format simple : "User: ... \n Assistant: ..."
+      let combinedPrompt = conversationHistory[senderId]
+        .map(msg => (msg.role === 'user' ? 'Utilisateur: ' : 'Assistant: ') + msg.content)
+        .join('\n') + '\nAssistant:';
 
       const imageUrl = await getImageUrl(event, pageAccessToken);
       if (imageUrl) {
-        prompt += `\nImage URL: ${imageUrl}`;
+        combinedPrompt += `\n[Image URL: ${imageUrl}]`;
       }
 
-      const encodedPrompt = encodeURIComponent(prompt);
+      const encodedPrompt = encodeURIComponent(combinedPrompt);
 
       const { data } = await axios.get(
         `https://api.zetsu.xyz/api/copilot`,
         {
           params: {
             prompt: encodedPrompt,
-            apikey: 'dfc3db8eeb9991ebed1880d4b153625f'  // Clé API ajoutée ici
+            apikey: 'dfc3db8eeb9991ebed1880d4b153625f'
           }
         }
       );
@@ -72,7 +71,16 @@ module.exports = {
         throw new Error('Réponse vide de l’IA.');
       }
 
+      // Ajoute la réponse de l'assistant à l'historique
       conversationHistory[senderId].push({ role: 'assistant', content: fullResponseText });
+
+      const chunkMessage = (message, maxLength) => {
+        const chunks = [];
+        for (let i = 0; i < message.length; i += maxLength) {
+          chunks.push(message.slice(i, i + maxLength));
+        }
+        return chunks;
+      };
 
       const messageChunks = chunkMessage(fullResponseText, 1900);
       for (const chunk of messageChunks) {
