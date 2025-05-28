@@ -20,6 +20,28 @@ const getImageUrl = async (event, token) => {
 
 const conversationHistory = {};
 
+async function sendTypingIndicator(senderId, pageAccessToken) {
+  try {
+    const res = await sendMessage(senderId, { text: "✍️ L’IA écrit..." }, pageAccessToken);
+    return res?.message_id || null;
+  } catch (err) {
+    console.error("Erreur lors de l'envoi de l'indicateur :", err.message);
+    return null;
+  }
+}
+
+async function deleteMessage(messageId, pageAccessToken) {
+  try {
+    if (messageId) {
+      await axios.delete(`https://graph.facebook.com/v19.0/${messageId}`, {
+        params: { access_token: pageAccessToken }
+      });
+    }
+  } catch (err) {
+    console.error("Erreur lors de la suppression du message :", err.message);
+  }
+}
+
 module.exports = {
   name: 'ai',
   description: 'Interact with Mocha AI using text queries and image analysis',
@@ -28,53 +50,61 @@ module.exports = {
 
   async execute(senderId, args, pageAccessToken, event) {
     let prompt = args.join(' ').trim() || 'Hello';
+    const uid = senderId;
+    const imageUrl = await getImageUrl(event, pageAccessToken);
+    if (imageUrl) {
+      prompt += `\nImage URL: ${imageUrl}`;
+    }
+
+    if (!conversationHistory[uid]) {
+      conversationHistory[uid] = [];
+    }
+
+    conversationHistory[uid].push({ role: 'user', content: prompt });
+
+    const chunkMessage = (message, maxLength) => {
+      const chunks = [];
+      for (let i = 0; i < message.length; i += maxLength) {
+        chunks.push(message.slice(i, i + maxLength));
+      }
+      return chunks;
+    };
+
+    const typingMessageId = await sendTypingIndicator(senderId, pageAccessToken);
 
     try {
-      if (!conversationHistory[senderId]) {
-        conversationHistory[senderId] = [];
+      // Essai avec Zetsu
+      const zetsuRes = await axios.get('https://api.zetsu.xyz/api/copilot', {
+        params: {
+          prompt: encodeURIComponent(prompt),
+          apikey: 'dfc3db8eeb9991ebed1880d4b153625f'
+        }
+      });
+
+      await deleteMessage(typingMessageId, pageAccessToken);
+
+      const reply = zetsuRes.data?.result || zetsuRes.data?.response;
+      if (!reply) throw new Error("Réponse vide de Zetsu");
+
+      conversationHistory[uid].push({ role: 'assistant', content: reply });
+
+      const chunks = chunkMessage(reply, 1900);
+      for (const chunk of chunks) {
+        await sendMessage(senderId, { text: chunk }, pageAccessToken);
       }
-
-      conversationHistory[senderId].push({ role: 'user', content: prompt });
-
-      if (conversationHistory[senderId].length > 10) {
-        conversationHistory[senderId] = conversationHistory[senderId].slice(-10);
-      }
-
-      let combinedPrompt = conversationHistory[senderId]
-        .map(msg => (msg.role === 'user' ? 'Utilisateur: ' : 'Assistant: ') + msg.content)
-        .join('\n') + '\nAssistant:';
-
-      const imageUrl = await getImageUrl(event, pageAccessToken);
-      if (imageUrl) {
-        combinedPrompt += `\n[Image URL: ${imageUrl}]`;
-      }
-
-      let responseText;
-
+    } catch (zetsuErr) {
+      console.warn("Zetsu a échoué, tentative avec Gemini...");
       try {
-        // Zetsu
-        const encodedPrompt = encodeURIComponent(combinedPrompt);
-        const zetsuResponse = await axios.get(`https://api.zetsu.xyz/api/copilot`, {
-          params: {
-            prompt: encodedPrompt,
-            apikey: 'dfc3db8eeb9991ebed1880d4b153625f'
-          }
-        });
-
-        responseText = zetsuResponse.data?.result || zetsuResponse.data?.response;
-
-        if (!responseText) throw new Error("Zetsu a répondu vide.");
-      } catch (zetsuError) {
-        console.warn("Zetsu indisponible. Bascule vers Gemini...");
-
-        // Gemini fallback
-        const geminiRes = await axios.post(
+        const geminiResponse = await axios.post(
           `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyDIGG4puPZ6kPIUR0CSD6fOgh6PNWqYFuM`,
           {
             contents: [
               {
-                parts: [{ text: combinedPrompt }],
-                role: 'user'
+                parts: [
+                  {
+                    text: prompt
+                  }
+                ]
               }
             ]
           },
@@ -85,29 +115,22 @@ module.exports = {
           }
         );
 
-        responseText = geminiRes.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        await deleteMessage(typingMessageId, pageAccessToken);
 
-        if (!responseText) throw new Error("Réponse vide de Gemini.");
-      }
+        const geminiReply = geminiResponse.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!geminiReply) throw new Error("Réponse vide de Gemini");
 
-      conversationHistory[senderId].push({ role: 'assistant', content: responseText });
+        conversationHistory[uid].push({ role: 'assistant', content: geminiReply });
 
-      const chunkMessage = (message, maxLength) => {
-        const chunks = [];
-        for (let i = 0; i < message.length; i += maxLength) {
-          chunks.push(message.slice(i, i + maxLength));
+        const chunks = chunkMessage(geminiReply, 1900);
+        for (const chunk of chunks) {
+          await sendMessage(senderId, { text: chunk }, pageAccessToken);
         }
-        return chunks;
-      };
-
-      const messageChunks = chunkMessage(responseText, 1900);
-      for (const chunk of messageChunks) {
-        await sendMessage(senderId, { text: chunk }, pageAccessToken);
+      } catch (geminiErr) {
+        console.error("Erreur Gemini:", geminiErr.message);
+        await deleteMessage(typingMessageId, pageAccessToken);
+        await sendMessage(senderId, { text: "Oups, 🎃🚬 une erreur s'est produite avec les deux IA." }, pageAccessToken);
       }
-
-    } catch (err) {
-      console.error("Erreur finale:", err?.response?.data || err.message);
-      await sendMessage(senderId, { text: "Les deux IA sont inaccessibles pour le moment." }, pageAccessToken);
     }
   },
 };
