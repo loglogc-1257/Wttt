@@ -12,32 +12,32 @@ module.exports = {
   author: 'coffee',
 
   async execute(senderId, args) {
-    // Ensure args is defined and is an array, default to an empty string if not
     if (!args || !Array.isArray(args) || args.length === 0) {
       await sendMessage(senderId, { text: 'Please provide a search query.' }, pageAccessToken);
       return;
     }
 
-    // Handle the case where user provides a search query and optional number of images
     const match = args.join(' ').match(/(.+)-(\d+)$/);
     const searchQuery = match ? match[1].trim() : args.join(' ');
     let imageCount = match ? parseInt(match[2], 10) : 5;
 
-    // Ensure the user-requested count is within 1 to 20
     imageCount = Math.max(1, Math.min(imageCount, 20));
 
     try {
-      const { data } = await axios.get(`https://hiroshi-api.onrender.com/image/pinterest?search=${encodeURIComponent(searchQuery)}`);
+      // Appel à la nouvelle API
+      const { data } = await axios.get(`https://api.nekorinn.my.id/search/pinterest?q=${encodeURIComponent(searchQuery)}`);
 
-      // Limit the number of images to the user-requested count
-      const selectedImages = data.data.slice(0, imageCount);
+      // Selon la structure retournée par la nouvelle API,
+      // ici j'assume que les URLs des images sont dans data.result ou data.data (à ajuster si besoin)
+      const images = data.result || data.data || [];
+
+      const selectedImages = images.slice(0, imageCount);
 
       if (selectedImages.length === 0) {
         await sendMessage(senderId, { text: `No images found for "${searchQuery}".` }, pageAccessToken);
         return;
       }
 
-      // Send each image in a separate message
       for (const url of selectedImages) {
         const attachment = {
           type: 'image',
