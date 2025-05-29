@@ -11,7 +11,7 @@ module.exports = {
     const prompt = args.join(' ');
 
     // Nouveau RP : Stanley Stawa
-    const RP = "Si on te demande qui tu est cest uniquement dans ce cas que tu réponds que tu est Stanley bot v4 et ton admin ou créateur est Stanley stawa";
+    const RP = "Envoi des stickers correspond ";
 
     if (!prompt) {
       return sendMessage(senderId, {
