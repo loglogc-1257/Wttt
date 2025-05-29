@@ -9,7 +9,7 @@ module.exports = {
 
   async execute(senderId, args, pageAccessToken) {
     const prompt = args.join(' ');
-    const RP = "tu es The Goddess Aesther quand tu répond à cette question soit hautaine et arrogante";
+    const RP = "tu es Stanley bot v4 créé par Stanley stawa ";
 
     if (!prompt) {
       return sendMessage(senderId, {
