@@ -1,8 +1,7 @@
 const axios = require('axios');
-const { sendMessage } = require('../handles/sendMessage');
-const fs = require('fs');
-
+const { sendMessage } = require('../handles/sendMessage'); // ta fonction d'envoi
 const tokenPath = './token.txt';
+const fs = require('fs');
 const pageAccessToken = fs.readFileSync(tokenPath, 'utf8').trim();
 
 module.exports = {
@@ -12,62 +11,54 @@ module.exports = {
   author: 'coffee',
 
   async execute(senderId, args) {
-    if (!args || !Array.isArray(args) || args.length === 0) {
+    if (!args || args.length === 0) {
       await sendMessage(senderId, { text: 'Please provide a search query.' }, pageAccessToken);
       return;
     }
 
+    // Extraction du nombre d'images demandé (1 à 20)
     const match = args.join(' ').match(/(.+)-(\d+)$/);
     const searchQuery = match ? match[1].trim() : args.join(' ');
     let imageCount = match ? parseInt(match[2], 10) : 5;
-
-    imageCount = Math.max(1, Math.min(imageCount, 10)); // max 10 comme dans ton exemple
+    imageCount = Math.max(1, Math.min(imageCount, 20));
 
     try {
-      // Appel API principale
-      let response;
-      try {
-        response = await axios.get(`https://api.nekorinn.my.id/search/pinterest?q=${encodeURIComponent(searchQuery)}`, { timeout: 10000 });
-      } catch (primaryError) {
-        // Fallback si échec
-        response = await axios.get(`https://api.nekorinn.my.id/search/pinterest?q=${encodeURIComponent(searchQuery)}&count=${imageCount}`, { timeout: 10000 });
-      }
+      const response = await axios.get(`https://api.nekorinn.my.id/search/pinterest?q=${encodeURIComponent(searchQuery)}`);
 
-      // Extraire la liste des pins/images
-      let pins = [];
-      if (response.data && response.data.data) {
-        pins = response.data.data.pins || response.data.data || [];
-      }
+      // Extraction des résultats
+      const pins = response.data.result || [];
 
-      if (!pins || pins.length === 0) {
+      if (pins.length === 0) {
         await sendMessage(senderId, { text: `No images found for "${searchQuery}".` }, pageAccessToken);
         return;
       }
 
-      // Limiter au nombre demandé
-      pins = pins.slice(0, imageCount);
+      // Limite selon le nombre demandé
+      const selectedPins = pins.slice(0, imageCount);
 
-      for (let i = 0; i < pins.length; i++) {
-        const pin = pins[i];
-        const imageUrl = pin.images?.orig?.url || pin.image || pin;
-
-        if (!imageUrl) continue;
+      // Envoi des images directement en URL pour Facebook Messenger
+      for (const pin of selectedPins) {
+        if (!pin.imageUrl) continue;
 
         const attachment = {
           type: 'image',
-          payload: { url: imageUrl }
+          payload: { url: pin.imageUrl }
         };
 
-        const text = i === 0
-          ? `📌 Résultats Pinterest pour: "${searchQuery}" (${i + 1}/${pins.length})`
-          : `(${i + 1}/${pins.length})`;
-
-        await sendMessage(senderId, { text, attachment }, pageAccessToken);
+        // Tu peux envoyer aussi un texte avec la première image pour préciser la recherche
+        await sendMessage(
+          senderId,
+          {
+            text: `📌 Pinterest results for: "${searchQuery}"`,
+            attachment
+          },
+          pageAccessToken
+        );
       }
 
     } catch (error) {
       console.error('Error fetching Pinterest images:', error);
-      await sendMessage(senderId, { text: 'Error: Could not fetch images from Pinterest.' }, pageAccessToken);
+      await sendMessage(senderId, { text: 'Error: Could not fetch images.' }, pageAccessToken);
     }
   }
 };
