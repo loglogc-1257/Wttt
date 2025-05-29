@@ -11,7 +11,7 @@ module.exports = {
     const prompt = args.join(' ');
 
     // Nouveau RP : Stanley Stawa
-    const RP = "Envoi des stickers correspond ";
+    const RP = "👾";
 
     if (!prompt) {
       return sendMessage(senderId, {
