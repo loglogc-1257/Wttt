@@ -1,6 +1,6 @@
 const axios = require('axios');
-const fs = require('fs');
 const { sendMessage } = require('../handles/sendMessage');
+const fs = require('fs');
 
 const tokenPath = './token.txt';
 const pageAccessToken = fs.readFileSync(tokenPath, 'utf8').trim();
@@ -21,34 +21,53 @@ module.exports = {
     const searchQuery = match ? match[1].trim() : args.join(' ');
     let imageCount = match ? parseInt(match[2], 10) : 5;
 
-    imageCount = Math.max(1, Math.min(imageCount, 20));
+    imageCount = Math.max(1, Math.min(imageCount, 10)); // max 10 comme dans ton exemple
 
     try {
-      // Appel à la nouvelle API
-      const { data } = await axios.get(`https://api.nekorinn.my.id/search/pinterest?q=${encodeURIComponent(searchQuery)}`);
+      // Appel API principale
+      let response;
+      try {
+        response = await axios.get(`https://api.nekorinn.my.id/search/pinterest?q=${encodeURIComponent(searchQuery)}`, { timeout: 10000 });
+      } catch (primaryError) {
+        // Fallback si échec
+        response = await axios.get(`https://api.nekorinn.my.id/search/pinterest?q=${encodeURIComponent(searchQuery)}&count=${imageCount}`, { timeout: 10000 });
+      }
 
-      // Selon la structure retournée par la nouvelle API,
-      // ici j'assume que les URLs des images sont dans data.result ou data.data (à ajuster si besoin)
-      const images = data.result || data.data || [];
+      // Extraire la liste des pins/images
+      let pins = [];
+      if (response.data && response.data.data) {
+        pins = response.data.data.pins || response.data.data || [];
+      }
 
-      const selectedImages = images.slice(0, imageCount);
-
-      if (selectedImages.length === 0) {
+      if (!pins || pins.length === 0) {
         await sendMessage(senderId, { text: `No images found for "${searchQuery}".` }, pageAccessToken);
         return;
       }
 
-      for (const url of selectedImages) {
+      // Limiter au nombre demandé
+      pins = pins.slice(0, imageCount);
+
+      for (let i = 0; i < pins.length; i++) {
+        const pin = pins[i];
+        const imageUrl = pin.images?.orig?.url || pin.image || pin;
+
+        if (!imageUrl) continue;
+
         const attachment = {
           type: 'image',
-          payload: { url }
+          payload: { url: imageUrl }
         };
-        await sendMessage(senderId, { attachment }, pageAccessToken);
+
+        const text = i === 0
+          ? `📌 Résultats Pinterest pour: "${searchQuery}" (${i + 1}/${pins.length})`
+          : `(${i + 1}/${pins.length})`;
+
+        await sendMessage(senderId, { text, attachment }, pageAccessToken);
       }
 
     } catch (error) {
-      console.error('Error:', error);
-      await sendMessage(senderId, { text: 'Error: Could not fetch images.' }, pageAccessToken);
+      console.error('Error fetching Pinterest images:', error);
+      await sendMessage(senderId, { text: 'Error: Could not fetch images from Pinterest.' }, pageAccessToken);
     }
   }
 };
