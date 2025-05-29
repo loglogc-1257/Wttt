@@ -9,7 +9,9 @@ module.exports = {
 
   async execute(senderId, args, pageAccessToken) {
     const prompt = args.join(' ');
-    const RP = "tu es Stanley bot v4 créé par Stanley stawa ";
+
+    // Nouveau RP : Stanley Stawa
+    const RP = "Tu es Stanley Stawa, un érudit excentrique et génial. Tu parles toujours avec un ton passionné, parfois dramatique, mais tes réponses sont toujours précises et brillamment argumentées.";
 
     if (!prompt) {
       return sendMessage(senderId, {
@@ -17,34 +19,42 @@ module.exports = {
       }, pageAccessToken);
     }
 
-    try {
-      const fullPrompt = `${RP} : ${prompt}`;
-      const apiUrl = `https://api.nekorinn.my.id/ai/gemma-3-27b?text=${encodeURIComponent(fullPrompt)}`;
+    const fullPrompt = `${RP} : ${prompt}`;
 
-      const { data } = await axios.get(apiUrl);
-      const response = data?.result || data?.description || data?.reponse || data;
+    const apis = [
+      `https://zaikyoov3-up.up.railway.app/api/perplexity-sonar-pro?prompt=${encodeURIComponent(fullPrompt)}&uid=${senderId}&imgs=1&system=1`,
+      `https://zaikyoov3-up.up.railway.app/api/openai-gpt-4.1?prompt=${encodeURIComponent(fullPrompt)}&uid=${senderId}&imgs=1&system=1`,
+      `https://zaikyoov3-up.up.railway.app/api/google-gemini-2.5-pro-preview?prompt=${encodeURIComponent(fullPrompt)}&uid=${senderId}&imgs=1&system=1`,
+      `https://zaikyoov3-up.up.railway.app/api/01-ai-yi-large?prompt=${encodeURIComponent(fullPrompt)}&uid=${senderId}&system=1`,
+      `https://api.nekorinn.my.id/ai/gemma-3-27b?text=${encodeURIComponent(fullPrompt)}`
+    ];
 
-      if (response) {
-        const parts = [];
-        for (let i = 0; i < response.length; i += 1800) {
-          parts.push(response.substring(i, i + 1800));
+    for (const url of apis) {
+      try {
+        const { data } = await axios.get(url);
+        const response = data?.response || data?.result || data?.description || data?.reponse || data;
+
+        if (response) {
+          const parts = [];
+          for (let i = 0; i < response.length; i += 1800) {
+            parts.push(response.substring(i, i + 1800));
+          }
+
+          for (const part of parts) {
+            await sendMessage(senderId, { text: part + ' 🪐' }, pageAccessToken);
+          }
+
+          return; // Réponse réussie
         }
-
-        for (const part of parts) {
-          await sendMessage(senderId, { text: part + ' 🪐' }, pageAccessToken);
-        }
-      } else {
-        await sendMessage(senderId, {
-          text: "Aucune réponse valide reçue de l'API."
-        }, pageAccessToken);
+      } catch (err) {
+        console.warn(`❌ Échec de l'API : ${url} — ${err.message}`);
+        continue; // On passe à l’API suivante
       }
-
-    } catch (err) {
-      console.error("Erreur API AI:", err.message || err);
-      sendMessage(senderId, {
-        text: "🤖 Oups ! Une petite erreur est survenue.\n\n" +
-              "❓ Veuillez poser votre question ou tapez 'help' pour voir les autres commandes disponibles."
-      }, pageAccessToken);
     }
+
+    // Aucune API n’a répondu
+    await sendMessage(senderId, {
+      text: "😓 Toutes les IA sont injoignables pour le moment.\nRéessaie dans quelques instants."
+    }, pageAccessToken);
   }
 };
