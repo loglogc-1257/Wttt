@@ -1,46 +1,4 @@
-const axios = require('axios');
-const { sendMessage } = require('../handles/sendMessage');
-
-const getImageUrl = async (event, token) => {
-  const mid = event?.message?.reply_to?.mid || event?.message?.mid;
-  if (!mid) return null;
-
-  try {
-    const { data } = await axios.get(`https://graph.facebook.com/v22.0/${mid}/attachments`, {
-      params: { access_token: token }
-    });
-
-    const imageUrl = data?.data?.[0]?.image_data?.url || data?.data?.[0]?.file_url || null;
-    return imageUrl;
-  } catch (err) {
-    console.error("Image URL fetch error:", err?.response?.data || err.message);
-    return null;
-  }
-};
-
-const conversationHistory = {};
-
-async function sendTypingIndicator(senderId, pageAccessToken) {
-  try {
-    const res = await sendMessage(senderId, { text: "✍️ L’IA écrit..." }, pageAccessToken);
-    return res?.message_id || null;
-  } catch (err) {
-    console.error("Erreur lors de l'envoi de l'indicateur :", err.message);
-    return null;
-  }
-}
-
-async function deleteMessage(messageId, pageAccessToken) {
-  try {
-    if (messageId) {
-      await axios.delete(`https://graph.facebook.com/v19.0/${messageId}`, {
-        params: { access_token: pageAccessToken }
-      });
-    }
-  } catch (err) {
-    console.error("Erreur lors de la suppression du message :", err.message);
-  }
-}
+// ... Les imports et fonctions précédentes inchangés ...
 
 module.exports = {
   name: 'ai',
@@ -127,9 +85,30 @@ module.exports = {
           await sendMessage(senderId, { text: chunk }, pageAccessToken);
         }
       } catch (geminiErr) {
-        console.error("Erreur Gemini:", geminiErr.message);
-        await deleteMessage(typingMessageId, pageAccessToken);
-        await sendMessage(senderId, { text: "Oups, 🎃🚬 une erreur s'est produite avec les deux IA." }, pageAccessToken);
+        console.warn("Gemini a échoué, tentative avec DavidCyrilTech...");
+        try {
+          const davidRes = await axios.get(`https://apis.davidcyriltech.my.id/ai/gpt4`, {
+            params: {
+              text: prompt
+            }
+          });
+
+          await deleteMessage(typingMessageId, pageAccessToken);
+
+          const davidReply = davidRes.data?.response;
+          if (!davidReply) throw new Error("Réponse vide de l'API DavidCyril");
+
+          conversationHistory[uid].push({ role: 'assistant', content: davidReply });
+
+          const chunks = chunkMessage(davidReply, 1900);
+          for (const chunk of chunks) {
+            await sendMessage(senderId, { text: chunk }, pageAccessToken);
+          }
+        } catch (davidErr) {
+          console.error("Toutes les IA ont échoué :", davidErr.message);
+          await deleteMessage(typingMessageId, pageAccessToken);
+          await sendMessage(senderId, { text: "😵‍💫 Oups, toutes les IA sont en panne... Veuillez réessayer plus tard. 🤖🔧" }, pageAccessToken);
+        }
       }
     }
   },
