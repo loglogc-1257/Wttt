@@ -13,41 +13,47 @@ module.exports = {
 
   async execute(senderId, args) {
     if (!args || !Array.isArray(args) || args.length === 0) {
-      await sendMessage(senderId, { text: '❗ Donne-moi un mot-clé pour chercher sur Pinterest.' }, pageAccessToken);
+      await sendMessage(senderId, { text: 'Please provide a search query.' }, pageAccessToken);
       return;
     }
 
-    // Extraction du prompt + nombre
     const match = args.join(' ').match(/(.+)-(\d+)$/);
     const searchQuery = match ? match[1].trim() : args.join(' ');
     let imageCount = match ? parseInt(match[2], 10) : 5;
 
-    imageCount = Math.max(1, Math.min(imageCount, 10)); // max 10 images
+    // Limite à 100 images max
+    imageCount = Math.max(1, Math.min(imageCount, 100));
 
     try {
       const { data } = await axios.get(`https://api.nekorinn.my.id/search/pinterest?q=${encodeURIComponent(searchQuery)}`);
+      const results = data.result;
 
-      if (!data || !data.result || data.result.length === 0) {
-        await sendMessage(senderId, { text: `❌ Aucune image trouvée pour "${searchQuery}".` }, pageAccessToken);
+      if (!Array.isArray(results) || results.length === 0) {
+        await sendMessage(senderId, { text: `No images found for "${searchQuery}".` }, pageAccessToken);
         return;
       }
 
-      const images = data.result.slice(0, imageCount);
+      const selectedImages = results.slice(0, imageCount);
 
-      for (const img of images) {
-        if (!img.imageUrl) continue;
+      for (const result of selectedImages) {
+        const imageUrl = result.imageUrl;
+        if (!imageUrl) continue;
 
         const attachment = {
           type: 'image',
-          payload: { url: img.imageUrl, is_reusable: true }
+          payload: {
+            url: imageUrl,
+            is_reusable: true
+          }
         };
 
         await sendMessage(senderId, { attachment }, pageAccessToken);
+        await new Promise(res => setTimeout(res, 500)); // Pause entre chaque image
       }
 
     } catch (error) {
-      console.error('Erreur Pinterest:', error.message);
-      await sendMessage(senderId, { text: '⚠️ Une erreur est survenue en récupérant les images.' }, pageAccessToken);
+      console.error('Pinterest Error:', error);
+      await sendMessage(senderId, { text: '❌ Erreur lors de la récupération des images.' }, pageAccessToken);
     }
   }
 };
