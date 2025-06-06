@@ -1,6 +1,8 @@
 const axios = require('axios');
 const { sendMessage } = require('../handles/sendMessage');
 
+const userHistory = {};
+
 module.exports = {
   name: 'ai',
   description: 'Interact with You-AI',
@@ -9,8 +11,6 @@ module.exports = {
 
   async execute(senderId, args, pageAccessToken) {
     const prompt = args.join(' ');
-
-    // Nouveau RP : Stanley Stawa
     const RP = "";
 
     if (!prompt) {
@@ -19,70 +19,80 @@ module.exports = {
       }, pageAccessToken);
     }
 
-    const fullPrompt = `${RP} : ${prompt}`;
+    if (!userHistory[senderId]) userHistory[senderId] = [];
+    userHistory[senderId].push(`User: ${prompt}`);
+    if (userHistory[senderId].length > 6) {
+      userHistory[senderId] = userHistory[senderId].slice(-6);
+    }
 
-    const apis = [
-      {
-        name: 'Perplexity',
-        method: 'GET',
-        url: `https://zaikyoov3-up.up.railway.app/api/perplexity-sonar-pro?prompt=${encodeURIComponent(fullPrompt)}&uid=${senderId}&imgs=1&system=1`
-      },
-      {
-        name: 'Pollinations.ai',
-        method: 'GET',
-        url: `https://text.pollinations.ai/prompt=${encodeURIComponent(fullPrompt)}`
-      },
-      {
-        name: 'OpenAI GPT-4.1',
-        method: 'GET',
-        url: `https://zaikyoov3-up.up.railway.app/api/openai-gpt-4.1?prompt=${encodeURIComponent(fullPrompt)}&uid=${senderId}&imgs=1&system=1`
-      },
-      {
-        name: 'Gemini 2.5 Pro',
-        method: 'GET',
-        url: `https://zaikyoov3-up.up.railway.app/api/google-gemini-2.5-pro-preview?prompt=${encodeURIComponent(fullPrompt)}&uid=${senderId}&imgs=1&system=1`
-      },
-      {
-        name: '01.AI Yi-Large',
-        method: 'GET',
-        url: `https://zaikyoov3-up.up.railway.app/api/01-ai-yi-large?prompt=${encodeURIComponent(fullPrompt)}&uid=${senderId}&system=1`
-      },
-      {
-        name: 'Gemma 3 27B',
-        method: 'GET',
-        url: `https://api.nekorinn.my.id/ai/gemma-3-27b?text=${encodeURIComponent(fullPrompt)}`
-      }
+    const fullPrompt = `${RP}\n${userHistory[senderId].join('\n')}`;
+
+    const urls = [
+      `https://text.pollinations.ai/${encodeURIComponent(fullPrompt)}`,
+      `https://mybot-rest.kozow.com/api/gemini?ask=${encodeURIComponent(fullPrompt)}`,
+      `https://mybot-rest.kozow.com/api/gemini-2.5-flash?ask=${encodeURIComponent(fullPrompt)}`,
+      `https://zaikyoov3-up.up.railway.app/api/perplexity-sonar-pro?prompt=${encodeURIComponent(fullPrompt)}&uid=${senderId}&imgs=1&system=1`,
+      `https://zaikyoov3-up.up.railway.app/api/01-ai-yi-large?prompt=${encodeURIComponent(fullPrompt)}&uid=${senderId}&system=1`,
+      `https://api.nekorinn.my.id/ai/gemma-3-27b?text=${encodeURIComponent(fullPrompt)}`
     ];
 
-    for (const api of apis) {
-      try {
-        const res = await axios.get(api.url);
-        const data = res.data;
-
-        const response = data?.response ||
-                         data?.result ||
-                         data?.description ||
-                         data?.reponse ||
-                         (typeof data === 'string' ? data : null);
-
-        if (response) {
-          const parts = [];
-          for (let i = 0; i < response.length; i += 1800) {
-            parts.push(response.substring(i, i + 1800));
-          }
-
-          for (const part of parts) {
-            await sendMessage(senderId, { text: part + ' 🪐' }, pageAccessToken);
-          }
-
-          return; // Succès → on arrête ici
+    const fetchWithTimeout = (url, timeout = 10000) => {
+      return axios.get(url, { timeout }).then(({ data }) => {
+        const response = typeof data === 'string'
+          ? data
+          : (data?.response || data?.result || data?.description || data?.reponse || data);
+        if (response && typeof response === 'string' && response.trim().length > 0) {
+          return response.trim();
         }
-      } catch (err) {
-        console.warn(`❌ ${api.name} a échoué : ${err.message}`);
-        continue;
+        throw new Error('Réponse vide');
+      }).catch(() => null); // éviter les erreurs bloquantes
+    };
+
+    // Lancer toutes les requêtes simultanément
+    const allRequests = urls.map(url => fetchWithTimeout(url, 10000));
+
+    let response = null;
+
+    // Étape 1 : attendre jusqu’à 5 secondes pour la première réponse
+    try {
+      response = await Promise.any(
+        allRequests.map(p => Promise.race([
+          p,
+          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
+        ]))
+      );
+    } catch (_) {
+      // aucune réponse en 5 sec
+    }
+
+    // Étape 2 : si rien reçu, attendre jusqu'à 5 secondes supplémentaires
+    if (!response) {
+      try {
+        response = await Promise.any(allRequests); // déjà lancées
+      } catch (_) {
+        // toujours rien
       }
     }
 
-    // Aucune IA n’a répondu
-    await sendMessage(senderId, {
-      text: "😓 Toutes les IA sont injoignables pour le moment.\nRéessaie dans quelques instants."
+    if (response) {
+      userHistory[senderId].push(`AI: ${response}`);
+      if (userHistory[senderId].length > 6) {
+        userHistory[senderId] = userHistory[senderId].slice(-6);
+      }
+
+      const parts = [];
+      for (let i = 0; i < response.length; i += 1800) {
+        parts.push(response.substring(i, i + 1800));
+      }
+
+      for (const part of parts) {
+        await sendMessage(senderId, { text: part + ' 🪐' }, pageAccessToken);
+      }
+    } else {
+      console.warn("❌ Aucune API n'a répondu dans les 10 secondes.");
+      await sendMessage(senderId, {
+        text: "😓 Toutes les IA sont injoignables ou ont mis trop de temps.\nRéessaie dans quelques instants."
+      }, pageAccessToken);
+    }
+  }
+};
