@@ -1,98 +1,62 @@
 const axios = require('axios');
 const { sendMessage } = require('../handles/sendMessage');
 
-const userHistory = {};
-
 module.exports = {
-  name: 'ai',
-  description: 'Interact with You-AI',
+  name: 'gpt4',
+  description: 'Interact with the Daikyu API with a specific persona and fallback to other APIs',
   usage: 'gpt4 [your message]',
   author: 'coffee',
-
   async execute(senderId, args, pageAccessToken) {
     const prompt = args.join(' ');
-    const RP = "";
+    if (!prompt) return sendMessage(senderId, { text: "Usage: daikyu <your message>" }, pageAccessToken);
 
-    if (!prompt) {
-      return sendMessage(senderId, {
-        text: "Veuillez poser votre question ou tapez 'help' pour voir les autres commandes disponibles."
-      }, pageAccessToken);
-    }
+    const uid = senderId; 
 
-    if (!userHistory[senderId]) userHistory[senderId] = [];
-    userHistory[senderId].push(`User: ${prompt}`);
-    if (userHistory[senderId].length > 6) {
-      userHistory[senderId] = userHistory[senderId].slice(-6);
-    }
+    // Define the role-play condition to ensure the bot always responds
+    const roleplay = `tu t'appelles Delfa Bot et ton créateur s'appelle Dëlfå Långę Purïficãtëur. Ne répète pas ton nom et celui de ton créateur quand personne ne le demande. Tu dois répondre à toutes les questions qui te sont posées, peu importe le sujet, sans jamais ignorer le message de l'utilisateur.`;
+    const fullPrompt = `${roleplay} ${prompt}`;
 
-    const fullPrompt = `${RP}\n${userHistory[senderId].join('\n')}`;
-
-    const urls = [
-      `https://text.pollinations.ai/${encodeURIComponent(fullPrompt)}`,
-      `https://mybot-rest.kozow.com/api/gemini?ask=${encodeURIComponent(fullPrompt)}`,
-      `https://mybot-rest.kozow.com/api/gemini-2.5-flash?ask=${encodeURIComponent(fullPrompt)}`,
-      `https://zaikyoov3-up.up.railway.app/api/perplexity-sonar-pro?prompt=${encodeURIComponent(fullPrompt)}&uid=${senderId}&imgs=1&system=1`,
-      `https://zaikyoov3-up.up.railway.app/api/01-ai-yi-large?prompt=${encodeURIComponent(fullPrompt)}&uid=${senderId}&system=1`,
-      `https://api.nekorinn.my.id/ai/gemma-3-27b?text=${encodeURIComponent(fullPrompt)}`
+    // List of APIs to try in order
+    const apis = [
+        { url: `https://daikyu-api.up.railway.app/api/llama-4?ask=${encodeURIComponent(fullPrompt)}&uid=${encodeURIComponent(uid)}`, param: 'ask' },
+        { url: `https://daikyu-api.up.railway.app/api/lorex?ask=${encodeURIComponent(fullPrompt)}&uid=${encodeURIComponent(uid)}`, param: 'ask' },
+        { url: `https://daikyu-api.up.railway.app/api/qwen2?prompt=${encodeURIComponent(fullPrompt)}&uid=${encodeURIComponent(uid)}`, param: 'prompt' },
+        { url: `https://daikyu-api.up.railway.app/api/gpt-5?ask=${encodeURIComponent(fullPrompt)}&uid=${encodeURIComponent(uid)}`, param: 'ask' },
+        { url: `https://daikyu-api.up.railway.app/api/claude-ai?prompt=${encodeURIComponent(fullPrompt)}&uid=${encodeURIComponent(uid)}`, param: 'prompt' },
+        { url: `https://daikyu-api.up.railway.app/api/gpt-4o-2024?ask=${encodeURIComponent(fullPrompt)}&uid=${encodeURIComponent(uid)}`, param: 'ask' },
+        // New fallback APIs added below
+        { url: `https://asios-api.vercel.app/api/grok3?query=${encodeURIComponent(fullPrompt)}&userId=${encodeURIComponent(uid)}`, param: 'query' },
+        { url: `https://asios-api.vercel.app/api/phi?query=${encodeURIComponent(fullPrompt)}&userId=${encodeURIComponent(uid)}`, param: 'query' },
+        { url: `https://asios-api.vercel.app/api/gpt-4o?query=${encodeURIComponent(fullPrompt)}&userId=${encodeURIComponent(uid)}`, param: 'query' },
+        { url: `https://asios-api.vercel.app/api/gpt-4o-mini?query=${encodeURIComponent(fullPrompt)}&userId=${encodeURIComponent(uid)}`, param: 'query' },
+        { url: `https://asios-api.vercel.app/api/gemini-flash?query=${encodeURIComponent(fullPrompt)}&userId=${encodeURIComponent(uid)}`, param: 'query' },
+        { url: `https://asios-api.vercel.app/api/gemini-2.5-flash?query=${encodeURIComponent(fullPrompt)}&userId=${encodeURIComponent(uid)}`, param: 'query' },
+        { url: `https://asios-api.vercel.app/api/bidara?query=${encodeURIComponent(fullPrompt)}&userId=${encodeURIComponent(uid)}`, param: 'query' },
     ];
 
-    const fetchWithTimeout = (url, timeout = 10000) => {
-      return axios.get(url, { timeout }).then(({ data }) => {
-        const response = typeof data === 'string'
-          ? data
-          : (data?.response || data?.result || data?.description || data?.reponse || data);
-        if (response && typeof response === 'string' && response.trim().length > 0) {
-          return response.trim();
-        }
-        throw new Error('Réponse vide');
-      }).catch(() => null); // éviter les erreurs bloquantes
-    };
-
-    // Lancer toutes les requêtes simultanément
-    const allRequests = urls.map(url => fetchWithTimeout(url, 10000));
-
-    let response = null;
-
-    // Étape 1 : attendre jusqu’à 5 secondes pour la première réponse
-    try {
-      response = await Promise.any(
-        allRequests.map(p => Promise.race([
-          p,
-          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
-        ]))
-      );
-    } catch (_) {
-      // aucune réponse en 5 sec
-    }
-
-    // Étape 2 : si rien reçu, attendre jusqu'à 5 secondes supplémentaires
-    if (!response) {
+    for (const api of apis) {
       try {
-        response = await Promise.any(allRequests); // déjà lancées
-      } catch (_) {
-        // toujours rien
+        const { data } = await axios.get(api.url);
+
+        // Assuming the response is in a 'response' or 'result' property
+        if (data && data.response) {
+            sendMessage(senderId, { text: data.response }, pageAccessToken);
+            return; // Exit the function after a successful API call
+        } else if (data && data.result) {
+            sendMessage(senderId, { text: data.result }, pageAccessToken);
+            return;
+        } else if (typeof data === 'string') {
+            // Handle case where the API returns a string directly
+            sendMessage(senderId, { text: data }, pageAccessToken);
+            return;
+        }
+      } catch (error) {
+        console.error(`Error with API ${api.url}:`, error.message);
+        // Continue to the next API in the list
       }
     }
 
-    if (response) {
-      userHistory[senderId].push(`AI: ${response}`);
-      if (userHistory[senderId].length > 6) {
-        userHistory[senderId] = userHistory[senderId].slice(-6);
-      }
-
-      const parts = [];
-      for (let i = 0; i < response.length; i += 1800) {
-        parts.push(response.substring(i, i + 1800));
-      }
-
-      for (const part of parts) {
-        await sendMessage(senderId, { text: part + ' 🪐' }, pageAccessToken);
-      }
-    } else {
-      console.warn("❌ Aucune API n'a répondu dans les 10 secondes.");
-      await sendMessage(senderId, {
-        text: "😓 Toutes les IA sont injoignables ou ont mis trop de temps.\nRéessaie dans quelques instants."
-      }, pageAccessToken);
-    }
+    // If all APIs fail
+    sendMessage(senderId, { text: 'Désolé, toutes les APIs sont actuellement indisponibles. Veuillez réessayer plus tard.' }, pageAccessToken);
   }
 };
